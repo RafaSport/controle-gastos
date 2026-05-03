@@ -2,7 +2,7 @@
 
 import { ModalComprador } from '@/components/compradores/ModalComprador';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 type Comprador = {
     id: number;
@@ -13,11 +13,10 @@ type Comprador = {
 
 export default function CompradoresPage() {
     const [compradores, setCompradores] = useState<Comprador[]>([]);
-
     const [modalAberto, setModalAberto] = useState(false);
     const [nome, setNome] = useState('');
-
     const [editandoId, setEditandoId] = useState<number | null>(null);
+    const [busca, setBusca] = useState('');
 
     useEffect(() => {
         const dados = localStorage.getItem('compradores');
@@ -76,30 +75,57 @@ export default function CompradoresPage() {
         setCompradores(novaLista);
     }
 
+    const compradoresFiltrados = useMemo(() => {
+        return compradores.filter((item) =>
+            item.nome.toLowerCase().includes(busca.toLowerCase())
+        );
+    }, [compradores, busca]);
+
     return (
         <MainLayout>
             <div className="space-y-4">
                 {/* Topo */}
-                <div className="flex items-center justify-between">
-                    <h1 className="text-2xl font-bold text-gray-800">
-                        Compradores
-                    </h1>
+                <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                        <h1 className="text-2xl font-bold text-gray-800">
+                            Compradores
+                        </h1>
 
-                    <button
-                        onClick={() => {
-                            setEditandoId(null);
-                            setNome('');
-                            setModalAberto(true);
-                        }}
-                        className="bg-gray-800 text-white px-4 h-10 rounded-xl"
-                    >
-                        Novo
-                    </button>
+                        <button
+                            onClick={() => {
+                                setEditandoId(null);
+                                setNome('');
+                                setModalAberto(true);
+                            }}
+                            className="bg-gray-800 text-white px-4 h-10 rounded-xl"
+                        >
+                            Novo
+                        </button>
+                    </div>
+
+                    <div className="bg-white rounded-2xl shadow-sm p-4 space-y-3">
+                        <input
+                            value={busca}
+                            onChange={(e) => setBusca(e.target.value)}
+                            placeholder="Buscar comprador..."
+                            className="w-full h-12 px-4 border rounded-xl"
+                        />
+
+                        <p className="text-sm text-gray-500">
+                            Total de compradores: {compradores.length}
+                        </p>
+                    </div>
                 </div>
 
                 {/* Lista */}
                 <div className="space-y-3">
-                    {compradores.map((item) => (
+                    {compradoresFiltrados.length === 0 && (
+                        <div className="bg-white rounded-2xl p-6 text-center text-gray-500">
+                            Nenhum comprador encontrado.
+                        </div>
+                    )}
+
+                    {compradoresFiltrados.map((item) => (
                         <div
                             key={item.id}
                             className="bg-white rounded-2xl shadow-sm p-4"
@@ -115,6 +141,7 @@ export default function CompradoresPage() {
                             <p className="text-sm text-gray-500">
                                 Total mês: R$ {item.valor}
                             </p>
+
                             <div className="flex gap-2 mt-3">
                                 <button
                                     onClick={() => editarComprador(item.id)}
@@ -133,6 +160,8 @@ export default function CompradoresPage() {
                         </div>
                     ))}
                 </div>
+
+                {/* Modal */}
                 <ModalComprador
                     aberto={modalAberto}
                     nome={nome}
