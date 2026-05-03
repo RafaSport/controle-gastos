@@ -16,6 +16,8 @@ export default function CompradoresPage() {
     const [modalAberto, setModalAberto] = useState(false);
     const [nome, setNome] = useState('');
 
+    const [editandoId, setEditandoId] = useState<number | null>(null);
+
     useEffect(() => {
         const dados = localStorage.getItem('compradores');
 
@@ -35,17 +37,46 @@ export default function CompradoresPage() {
     function salvarComprador() {
         if (!nome.trim()) return;
 
-        const novo = {
-            id: Date.now(),
-            nome,
-            parcelas: 0,
-            valor: 0,
-        };
+        if (editandoId) {
+            const listaAtualizada = compradores.map((item) =>
+                item.id === editandoId ? { ...item, nome } : item
+            );
 
-        setCompradores([...compradores, novo]);
+            setCompradores(listaAtualizada);
+        } else {
+            const novo = {
+                id: Date.now(),
+                nome,
+                parcelas: 0,
+                valor: 0,
+            };
+
+            setCompradores([...compradores, novo]);
+        }
 
         setNome('');
+        setEditandoId(null);
         setModalAberto(false);
+    }
+
+    function editarComprador(id: number) {
+        const comprador = compradores.find((item) => item.id === id);
+
+        if (!comprador) return;
+
+        setNome(comprador.nome);
+        setEditandoId(id);
+        setModalAberto(true);
+    }
+
+    function excluirComprador(id: number) {
+        const confirmar = confirm('Deseja excluir este comprador?');
+
+        if (!confirmar) return;
+
+        const novaLista = compradores.filter((item) => item.id !== id);
+
+        setCompradores(novaLista);
     }
 
     const loginGerado = gerarLogin(nome);
@@ -61,7 +92,11 @@ export default function CompradoresPage() {
                     </h1>
 
                     <button
-                        onClick={() => setModalAberto(true)}
+                        onClick={() => {
+                            setEditandoId(null);
+                            setNome('');
+                            setModalAberto(true);
+                        }}
                         className="bg-gray-800 text-white px-4 h-10 rounded-xl"
                     >
                         Novo
@@ -86,6 +121,21 @@ export default function CompradoresPage() {
                             <p className="text-sm text-gray-500">
                                 Total mês: R$ {item.valor}
                             </p>
+                            <div className="flex gap-2 mt-3">
+                                <button
+                                    onClick={() => editarComprador(item.id)}
+                                    className="px-3 h-9 rounded-xl border text-sm"
+                                >
+                                    Editar
+                                </button>
+
+                                <button
+                                    onClick={() => excluirComprador(item.id)}
+                                    className="px-3 h-9 rounded-xl bg-red-500 text-white text-sm"
+                                >
+                                    Excluir
+                                </button>
+                            </div>
                         </div>
                     ))}
                 </div>
@@ -95,7 +145,9 @@ export default function CompradoresPage() {
                     <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
                         <div className="bg-white w-full max-w-md rounded-3xl p-6 space-y-4">
                             <h2 className="text-xl font-bold text-gray-800">
-                                Novo Comprador
+                                {editandoId
+                                    ? 'Editar Comprador'
+                                    : 'Novo Comprador'}
                             </h2>
 
                             {/* Nome */}
@@ -140,7 +192,11 @@ export default function CompradoresPage() {
                             {/* Botões */}
                             <div className="grid grid-cols-2 gap-3 pt-2">
                                 <button
-                                    onClick={() => setModalAberto(false)}
+                                    onClick={() => {
+                                        setModalAberto(false);
+                                        setEditandoId(null);
+                                        setNome('');
+                                    }}
                                     className="h-12 rounded-xl border"
                                 >
                                     Cancelar
