@@ -59,10 +59,13 @@ export function MobileMenu({ aberto, fechar }: MobileMenuProps) {
                         Compradores
                     </Link>
 
-                    <button className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-100">
+                    <Link
+                        href="/compras"
+                        className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-100"
+                    >
                         <CreditCard size={20} />
                         Compras
-                    </button>
+                    </Link>
 
                     <button className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-100">
                         <Wallet size={20} />
