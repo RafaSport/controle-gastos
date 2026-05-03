@@ -7,6 +7,7 @@ import {
     Users,
     Wallet,
 } from 'lucide-react';
+import Link from 'next/link';
 
 export function Sidebar() {
     function sair() {
@@ -19,15 +20,21 @@ export function Sidebar() {
             <h2 className="text-xl font-bold text-gray-700 mb-8">Controle</h2>
 
             <nav className="flex flex-col gap-2">
-                <button className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-100">
+                <Link
+                    href="/"
+                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-100"
+                >
                     <LayoutDashboard size={20} />
                     Dashboard
-                </button>
+                </Link>
 
-                <button className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-100">
+                <Link
+                    href="/compradores"
+                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-100"
+                >
                     <Users size={20} />
                     Compradores
-                </button>
+                </Link>
 
                 <button className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-100">
                     <CreditCard size={20} />

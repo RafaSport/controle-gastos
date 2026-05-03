@@ -8,6 +8,7 @@ import {
     Wallet,
     X,
 } from 'lucide-react';
+import Link from 'next/link';
 
 function sair() {
     localStorage.removeItem('logado');
@@ -42,15 +43,21 @@ export function MobileMenu({ aberto, fechar }: MobileMenuProps) {
 
                 {/* Menu */}
                 <nav className="flex flex-col gap-2">
-                    <button className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-100">
+                    <Link
+                        href="/"
+                        className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-100"
+                    >
                         <LayoutDashboard size={20} />
                         Dashboard
-                    </button>
+                    </Link>
 
-                    <button className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-100">
+                    <Link
+                        href="/compradores"
+                        className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-100"
+                    >
                         <Users size={20} />
                         Compradores
-                    </button>
+                    </Link>
 
                     <button className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-100">
                         <CreditCard size={20} />
