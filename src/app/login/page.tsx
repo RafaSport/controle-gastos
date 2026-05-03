@@ -32,6 +32,7 @@ export default function LoginPage() {
 
         // Login fake inicial
         if (login === 'admin' && senha === '12345') {
+            localStorage.setItem('logado', 'true');
             window.location.href = '/';
             return;
         }
