@@ -1,13 +1,67 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
+// Gerador do cliente Prisma 7 — sem Rust engine, usa driver adapter
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider   = "prisma-client"
+  engineType = "client"
 }
 
+// No Prisma 7, a url fica no prisma.config.ts — aqui só o provider
 datasource db {
   provider = "postgresql"
+}
+
+enum Papel {
+  ADMIN
+  COMPRADOR
+}
+
+enum Cartao {
+  NUBANK
+  INTER
+  HIPER
+  ITAU
+}
+
+model Usuario {
+  id            String   @id @default(cuid())
+  nome          String
+  sobrenome     String
+  login         String   @unique
+  senha         String
+  papel         Papel    @default(COMPRADOR)
+  primeiroLogin Boolean  @default(true)
+  criadoEm     DateTime @default(now())
+
+  compras       Compra[]
+  mesesFechados MesFechado[]
+}
+
+model Compra {
+  id           String   @id @default(cuid())
+  usuarioId    String
+  cartao       Cartao
+  descricao    String
+  mesCompra    Int
+  anoCompra    Int
+  mesInicio    Int
+  anoInicio    Int
+  qtdParcelas  Int
+  mesFinal     Int
+  anoFinal     Int
+  valorParcela Float
+  criadoEm    DateTime @default(now())
+
+  usuario      Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+}
+
+model MesFechado {
+  id             String   @id @default(cuid())
+  usuarioId      String
+  mes            Int
+  ano            Int
+  totalPago      Float    @default(0)
+  dividaAnterior Float    @default(0)
+
+  usuario        Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@unique([usuarioId, mes, ano])
 }
