@@ -9,6 +9,11 @@ import {
     X,
 } from 'lucide-react';
 
+function sair() {
+    localStorage.removeItem('logado');
+    window.location.href = '/login';
+}
+
 type MobileMenuProps = {
     aberto: boolean;
     fechar: () => void;
@@ -60,7 +65,10 @@ export function MobileMenu({ aberto, fechar }: MobileMenuProps) {
 
                 {/* Sair */}
                 <div className="mt-10">
-                    <button className="flex items-center gap-3 p-3 rounded-xl hover:bg-red-50 text-red-500 w-full">
+                    <button
+                        onClick={sair}
+                        className="flex items-center gap-3 p-3 rounded-xl hover:bg-red-50 text-red-500 w-full"
+                    >
                         <LogOut size={20} />
                         Sair
                     </button>
