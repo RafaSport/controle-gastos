@@ -1,7 +1,7 @@
 'use client';
 
 import { MainLayout } from '@/components/layout/MainLayout';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 type Comprador = {
     id: number;
@@ -11,17 +11,22 @@ type Comprador = {
 };
 
 export default function CompradoresPage() {
-    const [compradores, setCompradores] = useState<Comprador[]>([
-        {
-            id: 1,
-            nome: 'João Silva',
-            parcelas: 3,
-            valor: 250,
-        },
-    ]);
+    const [compradores, setCompradores] = useState<Comprador[]>([]);
 
     const [modalAberto, setModalAberto] = useState(false);
     const [nome, setNome] = useState('');
+
+    useEffect(() => {
+        const dados = localStorage.getItem('compradores');
+
+        if (dados) {
+            setCompradores(JSON.parse(dados));
+        }
+    }, []);
+
+    useEffect(() => {
+        localStorage.setItem('compradores', JSON.stringify(compradores));
+    }, [compradores]);
 
     function gerarLogin(nomeCompleto: string) {
         return nomeCompleto.toLowerCase().trim().replaceAll(' ', '.');
