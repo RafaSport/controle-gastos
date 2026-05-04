@@ -1,0 +1,21 @@
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from '@prisma/client';
+
+// Evita múltiplas instâncias do Prisma durante o hot reload do Next.js
+const globalForPrisma = globalThis as unknown as {
+    prisma: PrismaClient | undefined;
+};
+
+function criarPrismaClient() {
+    // Adapter de conexão com PostgreSQL — obrigatório no Prisma 7
+    const adapter = new PrismaPg({
+        connectionString: process.env.DATABASE_URL!,
+    });
+    return new PrismaClient({ adapter } as any);
+}
+
+export const prisma = globalForPrisma.prisma ?? criarPrismaClient();
+
+if (process.env.NODE_ENV !== 'production') {
+    globalForPrisma.prisma = prisma;
+}
