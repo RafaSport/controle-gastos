@@ -7,7 +7,6 @@ interface TabelaComprasProps {
     anoSelecionado: number;
 }
 
-// Nomes dos meses para exibição
 const MESES = [
     'Jan',
     'Fev',
@@ -23,35 +22,28 @@ const MESES = [
     'Dez',
 ];
 
-// Ordena as compras: agrupa por cartão (menos compras primeiro),
-// dentro de cada cartão ordena pelo mês final mais próximo
 function ordenarCompras(compras: Compra[], mes: number, ano: number): Compra[] {
-    // Conta compras ativas por cartão no mês selecionado
     const contagemPorCartao: Record<string, number> = {};
     compras.forEach((c) => {
-        const ativa =
-            (c.anoInicio < ano ||
-                (c.anoInicio === ano && c.mesInicio <= mes)) &&
-            (c.anoFinal > ano || (c.anoFinal === ano && c.mesFinal >= mes));
-        if (ativa) {
+        const ini = c.anoInicio * 12 + c.mesInicio;
+        const fim = c.anoFinal * 12 + c.mesFinal;
+        const sel = ano * 12 + mes;
+        if (ini <= sel && fim >= sel) {
             contagemPorCartao[c.cartao] =
                 (contagemPorCartao[c.cartao] || 0) + 1;
         }
     });
 
     return [...compras].sort((a, b) => {
-        // Primeiro critério: cartão com menos compras aparece primeiro
         const contA = contagemPorCartao[a.cartao] || 0;
         const contB = contagemPorCartao[b.cartao] || 0;
         if (contA !== contB) return contA - contB;
 
-        // Segundo critério: dentro do mesmo cartão, mês final mais próximo primeiro
         if (a.cartao === b.cartao) {
-            const fimA = a.anoFinal * 12 + a.mesFinal;
-            const fimB = b.anoFinal * 12 + b.mesFinal;
-            return fimA - fimB;
+            return (
+                a.anoFinal * 12 + a.mesFinal - (b.anoFinal * 12 + b.mesFinal)
+            );
         }
-
         return a.cartao.localeCompare(b.cartao);
     });
 }
@@ -61,12 +53,11 @@ export default function TabelaCompras({
     mesSelecionado,
     anoSelecionado,
 }: TabelaComprasProps) {
-    // Filtra apenas compras ativas no mês selecionado
     const comprasDoMes = compras.filter((c) => {
-        const inicioEmMeses = c.anoInicio * 12 + c.mesInicio;
-        const fimEmMeses = c.anoFinal * 12 + c.mesFinal;
-        const selEmMeses = anoSelecionado * 12 + mesSelecionado;
-        return inicioEmMeses <= selEmMeses && fimEmMeses >= selEmMeses;
+        const ini = c.anoInicio * 12 + c.mesInicio;
+        const fim = c.anoFinal * 12 + c.mesFinal;
+        const sel = anoSelecionado * 12 + mesSelecionado;
+        return ini <= sel && fim >= sel;
     });
 
     const ordenadas = ordenarCompras(
@@ -99,40 +90,37 @@ export default function TabelaCompras({
                 </thead>
                 <tbody>
                     {ordenadas.map((compra, index) => (
-                        // Zebrado: linhas pares cinza escuro, ímpares cinza claro
                         <tr
                             key={compra.id}
+                            // Zebrado: linha par mais escura, ímpar mais clara
                             className={
-                                index % 2 === 0
-                                    ? 'bg-zinc-900'
-                                    : 'bg-zinc-800/50'
+                                index % 2 === 0 ? 'bg-zinc-900' : 'bg-zinc-800'
                             }
                         >
-                            {/* Primeira coluna com cor do cartão */}
-                            <td className="px-3 py-3">
+                            {/* Primeira coluna com cor de fundo do cartão */}
+                            <td className="px-2 py-2">
                                 <CartaoTag cartao={compra.cartao as Cartao} />
                             </td>
-                            <td className="px-3 py-3 text-zinc-200">
+                            <td className="px-2 py-2 text-zinc-200">
                                 {compra.descricao}
                             </td>
-                            <td className="px-3 py-3 text-center text-zinc-400">
+                            <td className="px-2 py-2 text-center text-zinc-400">
                                 {MESES[compra.mesCompra - 1]}/{compra.anoCompra}
                             </td>
-                            <td className="px-3 py-3 text-center text-zinc-400">
+                            <td className="px-2 py-2 text-center text-zinc-400">
                                 {MESES[compra.mesInicio - 1]}/{compra.anoInicio}
                             </td>
-                            <td className="px-3 py-3 text-center text-zinc-400">
-                                {/* Mostra parcela atual / total */}
+                            <td className="px-2 py-2 text-center text-zinc-400">
                                 {anoSelecionado * 12 +
                                     mesSelecionado -
                                     (compra.anoInicio * 12 + compra.mesInicio) +
                                     1}
                                 /{compra.qtdParcelas}
                             </td>
-                            <td className="px-3 py-3 text-center text-zinc-400">
+                            <td className="px-2 py-2 text-center text-zinc-400">
                                 {MESES[compra.mesFinal - 1]}/{compra.anoFinal}
                             </td>
-                            <td className="px-3 py-3 text-right font-medium text-zinc-100">
+                            <td className="px-2 py-2 text-right font-medium text-zinc-100">
                                 R${' '}
                                 {compra.valorParcela
                                     .toFixed(2)
