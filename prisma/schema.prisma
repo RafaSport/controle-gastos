@@ -1,10 +1,8 @@
-// Gerador do cliente Prisma 7 — sem Rust engine, usa driver adapter
 generator client {
   provider   = "prisma-client"
   engineType = "client"
 }
 
-// No Prisma 7, a url fica no prisma.config.ts — aqui só o provider
 datasource db {
   provider = "postgresql"
 }
@@ -29,10 +27,12 @@ model Usuario {
   senha         String
   papel         Papel    @default(COMPRADOR)
   primeiroLogin Boolean  @default(true)
+  usaUber       Boolean  @default(false) // indica se o comprador usa uber
   criadoEm     DateTime @default(now())
 
   compras       Compra[]
   mesesFechados MesFechado[]
+  corridas      Corrida[]    // corridas de uber do comprador
 }
 
 model Compra {
@@ -64,4 +64,15 @@ model MesFechado {
   usuario        Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
   @@unique([usuarioId, mes, ano])
+}
+
+// Registra cada corrida de uber individualmente
+model Corrida {
+  id        String   @id @default(cuid())
+  usuarioId String
+  data      DateTime // data da corrida
+  valor     Float    // valor da corrida
+  criadoEm DateTime @default(now())
+
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 }

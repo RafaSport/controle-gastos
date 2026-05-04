@@ -12,6 +12,7 @@ export interface Usuario {
     login: string;
     papel: Papel;
     primeiroLogin: boolean;
+    usaUber: boolean;
     qtdCompras?: number;
     totalAPagar?: number;
 }
@@ -40,6 +41,14 @@ export interface MesFechado {
     ano: number;
     totalPago: number;
     dividaAnterior: number;
+}
+
+// Corrida de Uber individual
+export interface Corrida {
+    id: string;
+    usuarioId: string;
+    data: string;
+    valor: number;
 }
 
 // Variantes de cor do botão
