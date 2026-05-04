@@ -4,10 +4,11 @@ import Botao from '@/components/ui/Botao';
 import Input from '@/components/ui/Input';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 export default function PaginaLogin() {
     const router = useRouter();
+    const loginRef = useRef<HTMLInputElement>(null);
 
     const [login, setLogin] = useState('');
     const [senha, setSenha] = useState('');
@@ -15,20 +16,33 @@ export default function PaginaLogin() {
     const [carregando, setCarregando] = useState(false);
 
     async function handleLogin() {
-        // Limpa erro anterior e ativa o estado de carregamento
         setErro('');
+
+        // Validação antes de bater na API
+        if (!login.trim() || !senha.trim()) {
+            setErro('Preencha o login e a senha para continuar.');
+            loginRef.current?.focus();
+            return;
+        }
+
         setCarregando(true);
 
         const resultado = await signIn('credentials', {
             login,
             senha,
-            redirect: false, // evita redirecionamento automático para tratar o erro aqui
+            redirect: false,
         });
 
         setCarregando(false);
 
-        if (!resultado?.ok) {
-            setErro('Login ou senha incorretos.');
+        // No Auth.js v5 beta, verificamos o erro pelo campo 'error'
+        if (!resultado || resultado.error) {
+            setLogin('');
+            setSenha('');
+            setErro(
+                'Login ou senha incorretos. Verifique seus dados e tente novamente.'
+            );
+            setTimeout(() => loginRef.current?.focus(), 50);
             return;
         }
 
@@ -37,23 +51,14 @@ export default function PaginaLogin() {
         const sessao = await sessaoRes.json();
         const usuario = sessao?.user;
 
-        if (!usuario) {
-            setErro('Erro ao carregar sessão.');
-            return;
-        }
-
         // Redireciona para troca de senha se for o primeiro acesso
-        if (usuario.primeiroLogin) {
+        if (usuario?.primeiroLogin) {
             router.push('/trocar-senha');
             return;
         }
 
         // Redireciona conforme o papel do usuário
-        if (usuario.papel === 'ADMIN') {
-            router.push('/admin');
-        } else {
-            router.push('/comprador');
-        }
+        router.push(usuario?.papel === 'ADMIN' ? '/admin' : '/comprador');
     }
 
     return (
@@ -71,27 +76,39 @@ export default function PaginaLogin() {
             {/* Card do formulário */}
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 flex flex-col gap-4">
                 <Input
+                    ref={loginRef}
                     label="Login"
                     placeholder="seu.login"
                     value={login}
                     onChange={(e) => setLogin(e.target.value)}
                     autoComplete="username"
+                    // Enter no campo login pula para o campo senha
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            document.getElementById('campo-senha')?.focus();
+                        }
+                    }}
                 />
 
                 <Input
+                    id="campo-senha"
                     label="Senha"
                     type="password"
                     placeholder="••••••"
                     value={senha}
                     onChange={(e) => setSenha(e.target.value)}
                     autoComplete="current-password"
-                    // Permite enviar com Enter
+                    // Enter no campo senha dispara o login
                     onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
                 />
 
-                {/* Mensagem de erro */}
+                {/* Mensagem de erro com caixa destacada */}
                 {erro && (
-                    <p className="text-xs text-red-400 text-center">{erro}</p>
+                    <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
+                        <span className="text-red-400 mt-0.5 shrink-0">⚠</span>
+                        <p className="text-xs text-red-400">{erro}</p>
+                    </div>
                 )}
 
                 <Botao

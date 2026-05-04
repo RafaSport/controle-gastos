@@ -34,10 +34,12 @@ export default function Botao({
     children,
     disabled,
     className = '',
+    type = 'button',
     ...props
 }: BotaoProps) {
     return (
         <button
+            type={type}
             disabled={disabled || carregando}
             className={`
         inline-flex items-center justify-center gap-2

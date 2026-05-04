@@ -4,15 +4,12 @@ import Credentials from 'next-auth/providers/credentials';
 import { prisma } from './prisma';
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-    // Define as páginas customizadas de autenticação
     pages: {
         signIn: '/login',
     },
-
     session: {
-        strategy: 'jwt', // usa JWT para manter a sessão
+        strategy: 'jwt',
     },
-
     providers: [
         Credentials({
             name: 'credentials',
@@ -22,38 +19,46 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             },
 
             async authorize(credentials) {
+                // LOG para ver o que está chegando
+                console.log('>>> authorize chamado com:', credentials);
+
                 const { login, senha } = credentials as {
                     login: string;
                     senha: string;
                 };
 
-                if (!login || !senha) return null;
+                if (!login || !senha) {
+                    console.log('>>> login ou senha vazios, retornando null');
+                    return null;
+                }
 
-                // Busca o usuário pelo login no banco
                 const usuario = await (prisma as any).usuario.findUnique({
                     where: { login },
                 });
 
+                console.log(
+                    '>>> usuario encontrado:',
+                    usuario ? usuario.login : 'nenhum'
+                );
+
                 if (!usuario) return null;
 
-                // Compara a senha enviada com o hash salvo no banco
                 const senhaValida = await bcrypt.compare(senha, usuario.senha);
+                console.log('>>> senha válida:', senhaValida);
+
                 if (!senhaValida) return null;
 
-                // Retorna os dados que ficarão no token JWT
                 return {
                     id: usuario.id,
                     name: usuario.nome,
-                    email: usuario.login, // NextAuth exige o campo email
+                    email: usuario.login,
                     papel: usuario.papel,
                     primeiroLogin: usuario.primeiroLogin,
                 };
             },
         }),
     ],
-
     callbacks: {
-        // Adiciona dados extras ao token JWT
         async jwt({ token, user }) {
             if (user) {
                 token.id = user.id;
@@ -62,8 +67,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             }
             return token;
         },
-
-        // Repassa os dados do token para a sessão acessível no front
         async session({ session, token }) {
             session.user.id = token.id as string;
             (session.user as any).papel = token.papel;
