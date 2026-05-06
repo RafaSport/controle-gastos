@@ -4,15 +4,15 @@ interface CartaoTagProps {
     cartao: Cartao;
 }
 
-// Cores de fundo e texto por cartão
-const estilosCartao: Record<Cartao, string> = {
-    NUBANK: 'bg-nubank  text-white',
-    INTER: 'bg-inter   text-white',
-    HIPER: 'bg-hiper   text-white',
-    ITAU: 'bg-itau    text-white',
+// Cores de fundo usando estilos inline — necessário no Tailwind 4
+// pois classes dinâmicas não são detectadas em tempo de build
+const coresCartao: Record<Cartao, string> = {
+    NUBANK: '#820AD1',
+    INTER: '#FF6600',
+    HIPER: '#CC0000',
+    ITAU: '#003087',
 };
 
-// Rótulos amigáveis dos cartões
 const rotulosCartao: Record<Cartao, string> = {
     NUBANK: 'Nubank',
     INTER: 'Inter',
@@ -23,12 +23,8 @@ const rotulosCartao: Record<Cartao, string> = {
 export default function CartaoTag({ cartao }: CartaoTagProps) {
     return (
         <span
-            className={`
-      inline-flex items-center justify-center
-      px-3 py-1 rounded-md
-      text-xs font-bold tracking-wide
-      ${estilosCartao[cartao]}
-    `}
+            style={{ backgroundColor: coresCartao[cartao] }}
+            className="inline-flex items-center justify-center px-3 py-1 rounded-md text-xs font-bold tracking-wide text-white"
         >
             {rotulosCartao[cartao]}
         </span>

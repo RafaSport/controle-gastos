@@ -1,7 +1,8 @@
 import { PrismaPg } from '@prisma/adapter-pg';
-import { Cartao, Papel, PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import 'dotenv/config';
+import { PrismaClient } from '../src/generated/prisma/client';
+import { Cartao, Papel } from '../src/generated/prisma/enums';
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter } as any);
@@ -31,19 +32,29 @@ async function main() {
 
     // ==================== COMPRADORES ====================
     const compradores = [
-        { nome: 'Ana', sobrenome: 'Bia' },
-        { nome: 'Carlos', sobrenome: 'Silva' },
-        { nome: 'Marta', sobrenome: 'Lima' },
+        { nome: 'Ana', sobrenome: 'Bia', usaUber: false },
+        { nome: 'Carlos', sobrenome: 'Silva', usaUber: false },
+        { nome: 'Marta', sobrenome: 'Lima', usaUber: false },
+        { nome: 'João', sobrenome: 'Uber', usaUber: true },
     ];
 
+    const hoje = new Date();
+    const mes = hoje.getMonth() + 1;
+    const ano = hoje.getFullYear();
+
     for (const c of compradores) {
-        const login = `${c.nome.toLowerCase()}.${c.sobrenome.toLowerCase()}`;
+        const login = `${c.nome
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')}.${c.sobrenome.toLowerCase()}`;
         const existe = await (prisma as any).usuario.findUnique({
             where: { login },
         });
 
         if (!existe) {
             const senha = await bcrypt.hash(`${login}123`, 10);
+
+            // Cria o comprador com o campo usaUber
             const usuario = await (prisma as any).usuario.create({
                 data: {
                     nome: c.nome,
@@ -52,18 +63,55 @@ async function main() {
                     senha,
                     papel: Papel.COMPRADOR,
                     primeiroLogin: true,
+                    usaUber: c.usaUber,
                 },
             });
 
             console.log(`✅ Comprador criado: ${login} / senha: ${login}123`);
 
             // ==================== COMPRAS ====================
-            // Cada comprador recebe compras em cartões diferentes
-            const comprasDoUsuario = comprasExemplo(usuario.id);
+            const comprasDoUsuario = gerarCompras(usuario.id, mes, ano);
             for (const compra of comprasDoUsuario) {
                 await (prisma as any).compra.create({ data: compra });
             }
             console.log(`   └─ ${comprasDoUsuario.length} compras criadas`);
+
+            // ==================== CORRIDAS (só quem usa Uber) ====================
+            if (c.usaUber) {
+                const corridas = [
+                    {
+                        usuarioId: usuario.id,
+                        data: new Date(ano, mes - 1, 3),
+                        valor: 18.5,
+                    },
+                    {
+                        usuarioId: usuario.id,
+                        data: new Date(ano, mes - 1, 7),
+                        valor: 22.0,
+                    },
+                    {
+                        usuarioId: usuario.id,
+                        data: new Date(ano, mes - 1, 12),
+                        valor: 15.75,
+                    },
+                    {
+                        usuarioId: usuario.id,
+                        data: new Date(ano, mes - 1, 18),
+                        valor: 30.0,
+                    },
+                    {
+                        usuarioId: usuario.id,
+                        data: new Date(ano, mes - 1, 25),
+                        valor: 12.9,
+                    },
+                ];
+                for (const corrida of corridas) {
+                    await (prisma as any).corrida.create({ data: corrida });
+                }
+                console.log(
+                    `   └─ ${corridas.length} corridas de Uber criadas`
+                );
+            }
         } else {
             console.log(`ℹ️ Comprador já existe: ${login}`);
         }
@@ -71,11 +119,7 @@ async function main() {
 }
 
 // Gera compras de exemplo para um usuário
-function comprasExemplo(usuarioId: string) {
-    const hoje = new Date();
-    const mes = hoje.getMonth() + 1;
-    const ano = hoje.getFullYear();
-
+function gerarCompras(usuarioId: string, mes: number, ano: number) {
     return [
         {
             usuarioId,

@@ -1,13 +1,13 @@
 import { removerCorrida } from '@/services/corrida.service';
 import { NextRequest, NextResponse } from 'next/server';
 
-// Remove uma corrida pelo ID
 export async function DELETE(
     _: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        await removerCorrida(params.id);
+        const { id } = await params;
+        await removerCorrida(id);
         return NextResponse.json({ sucesso: true });
     } catch (erro: any) {
         return NextResponse.json({ erro: erro.message }, { status: 500 });
