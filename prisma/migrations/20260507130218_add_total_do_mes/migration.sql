@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "MesFechado" ADD COLUMN     "totalDoMes" DOUBLE PRECISION NOT NULL DEFAULT 0;

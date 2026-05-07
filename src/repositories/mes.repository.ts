@@ -1,6 +1,5 @@
 import { prisma } from '@/lib/prisma';
 
-// Busca todos os meses fechados de um usuário
 export async function buscarMesesFechados(usuarioId: string) {
     return await (prisma as any).mesFechado.findMany({
         where: { usuarioId },
@@ -8,11 +7,11 @@ export async function buscarMesesFechados(usuarioId: string) {
     });
 }
 
-// Cria ou atualiza o registro de um mês fechado
 export async function fecharMes(dados: {
     usuarioId: string;
     mes: number;
     ano: number;
+    totalDoMes: number;
     totalPago: number;
     dividaAnterior: number;
 }) {
@@ -25,6 +24,7 @@ export async function fecharMes(dados: {
             },
         },
         update: {
+            totalDoMes: dados.totalDoMes,
             totalPago: dados.totalPago,
             dividaAnterior: dados.dividaAnterior,
         },

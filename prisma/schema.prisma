@@ -59,8 +59,9 @@ model MesFechado {
   usuarioId      String
   mes            Int
   ano            Int
-  totalPago      Float    @default(0)
-  dividaAnterior Float    @default(0)
+  totalDoMes     Float    @default(0)  // total que deveria ser pago
+  totalPago      Float    @default(0)  // valor efetivamente pago
+  dividaAnterior Float    @default(0)  // saldo acumulado de meses anteriores
 
   usuario        Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
