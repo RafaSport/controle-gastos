@@ -2,6 +2,7 @@
 
 import Header from '@/components/layout/Header';
 import Badge from '@/components/ui/Badge';
+import CardDividaAnterior from '@/components/ui/CardDividaAnterior';
 import CardUber from '@/components/ui/CardUber';
 import SeletorMes from '@/components/ui/SeletorMes';
 import TabelaCompras from '@/components/ui/TabelaCompras';
@@ -28,7 +29,6 @@ export default function PaginaCompradorCliente({
     const [carregando, setCarregando] = useState(true);
     const [carregandoUber, setCarregandoUber] = useState(false);
 
-    // Busca dados principais ao montar
     useEffect(() => {
         async function buscarDados() {
             const [resUsuario, resCompras, resMeses] = await Promise.all([
@@ -36,7 +36,6 @@ export default function PaginaCompradorCliente({
                 fetch(`/api/compras/usuario?id=${usuarioId}`),
                 fetch(`/api/meses?id=${usuarioId}`),
             ]);
-
             const dadosUsuario = await resUsuario.json();
             const dadosCompras = await resCompras.json();
             const dadosMeses = await resMeses.json();
@@ -49,10 +48,8 @@ export default function PaginaCompradorCliente({
         buscarDados();
     }, [usuarioId]);
 
-    // Busca corridas sempre que o mês/ano mudar e o usuário usar Uber
     useEffect(() => {
         if (!usuario?.usaUber) return;
-
         async function buscarCorridas() {
             setCarregandoUber(true);
             const res = await fetch(
@@ -79,11 +76,10 @@ export default function PaginaCompradorCliente({
         return lista;
     }, [mesesFechados]);
 
-    const mesFechado = mesesFechados.some(
+    const mesFechado = mesesFechados.find(
         (mf) => mf.mes === mesSelecionado && mf.ano === anoSelecionado
     );
 
-    // Total das compras do mês
     const totalCompras = useMemo(() => {
         return compras
             .filter((c) => {
@@ -95,18 +91,18 @@ export default function PaginaCompradorCliente({
             .reduce((acc, c) => acc + c.valorParcela, 0);
     }, [compras, mesSelecionado, anoSelecionado]);
 
-    // Total do Uber do mês
     const totalUber = corridas.reduce((acc, c) => acc + c.valor, 0);
 
-    // Total geral = compras + uber
-    const totalMes = totalCompras + totalUber;
-
-    const dividaAnterior = useMemo(() => {
-        const mes = mesesFechados.find(
-            (mf) => mf.mes === mesSelecionado && mf.ano === anoSelecionado
+    const totalDivida = mesesFechados
+        .filter(
+            (mf) => mf.ano * 12 + mf.mes < anoSelecionado * 12 + mesSelecionado
+        )
+        .reduce(
+            (acc, mf) => acc + Math.max(0, mf.totalDoMes - mf.totalPago),
+            0
         );
-        return mes?.dividaAnterior ?? 0;
-    }, [mesesFechados, mesSelecionado, anoSelecionado]);
+
+    const totalMes = totalCompras + totalUber + totalDivida;
 
     if (carregando) {
         return (
@@ -133,7 +129,6 @@ export default function PaginaCompradorCliente({
                     }}
                 />
 
-                {/* Card do Uber — só aparece se o comprador usar Uber */}
                 {usuario?.usaUber && (
                     <CardUber
                         usuarioId={usuarioId}
@@ -144,32 +139,63 @@ export default function PaginaCompradorCliente({
                     />
                 )}
 
+                {/* Card de dívida anterior */}
+                <CardDividaAnterior
+                    mesesFechados={mesesFechados}
+                    mesSelecionado={mesSelecionado}
+                    anoSelecionado={anoSelecionado}
+                />
+
                 <TabelaCompras
                     compras={compras}
                     mesSelecionado={mesSelecionado}
                     anoSelecionado={anoSelecionado}
                 />
 
-                {/* Rodapé com totais e status */}
-                <div className="flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3">
-                    <Badge status={mesFechado ? 'finalizado' : 'aberto'} />
+                {/* Rodapé com breakdown completo */}
+                <div className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                        <Badge status={mesFechado ? 'finalizado' : 'aberto'} />
+                        {mesFechado && (
+                            <span className="text-xs text-zinc-500">
+                                Pago: R${' '}
+                                {mesFechado.totalPago
+                                    .toFixed(2)
+                                    .replace('.', ',')}
+                            </span>
+                        )}
+                    </div>
 
-                    {dividaAnterior > 0 && (
-                        <div className="text-center">
-                            <p className="text-xs text-zinc-500">
-                                Dívida anterior
-                            </p>
-                            <p className="text-sm font-medium text-red-400">
-                                R$ {dividaAnterior.toFixed(2).replace('.', ',')}
-                            </p>
+                    <div className="border-t border-zinc-800 pt-2 flex flex-col gap-1">
+                        <div className="flex justify-between text-xs text-zinc-500">
+                            <span>Compras</span>
+                            <span>
+                                R$ {totalCompras.toFixed(2).replace('.', ',')}
+                            </span>
                         </div>
-                    )}
-
-                    <div className="text-right">
-                        <p className="text-xs text-zinc-500">Total do mês</p>
-                        <p className="text-base font-bold text-zinc-100">
-                            R$ {totalMes.toFixed(2).replace('.', ',')}
-                        </p>
+                        {totalUber > 0 && (
+                            <div className="flex justify-between text-xs text-zinc-500">
+                                <span>Uber</span>
+                                <span>
+                                    R$ {totalUber.toFixed(2).replace('.', ',')}
+                                </span>
+                            </div>
+                        )}
+                        {totalDivida > 0 && (
+                            <div className="flex justify-between text-xs text-red-400">
+                                <span>Dívida anterior</span>
+                                <span>
+                                    R${' '}
+                                    {totalDivida.toFixed(2).replace('.', ',')}
+                                </span>
+                            </div>
+                        )}
+                        <div className="flex justify-between text-sm font-bold text-zinc-100 border-t border-zinc-800 pt-1 mt-1">
+                            <span>Total do mês</span>
+                            <span>
+                                R$ {totalMes.toFixed(2).replace('.', ',')}
+                            </span>
+                        </div>
                     </div>
                 </div>
             </main>

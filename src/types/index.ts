@@ -39,6 +39,7 @@ export interface MesFechado {
     usuarioId: string;
     mes: number;
     ano: number;
+    totalDoMes: number; 
     totalPago: number;
     dividaAnterior: number;
 }

@@ -3,14 +3,16 @@
 import Header from '@/components/layout/Header';
 import Badge from '@/components/ui/Badge';
 import Botao from '@/components/ui/Botao';
+import CardDividaAnterior from '@/components/ui/CardDividaAnterior';
 import CardUber from '@/components/ui/CardUber';
 import CartaoTag from '@/components/ui/CartaoTag';
 import ModalCadastroCompra from '@/components/ui/ModalCadastroCompra';
 import ModalCadastroCorrida from '@/components/ui/ModalCadastroCorrida';
 import ModalEditarCompra from '@/components/ui/ModalEditarCompra';
+import ModalPagamento from '@/components/ui/ModalPagamento';
 import SeletorMes from '@/components/ui/SeletorMes';
 import { Cartao, Compra, Corrida, MesFechado, Usuario } from '@/types';
-import { ArrowLeft, PlusCircle } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -46,10 +48,10 @@ export default function PaginaCompradorAdminCliente({ usuarioId }: Props) {
     const [carregando, setCarregando] = useState(true);
     const [carregandoUber, setCarregandoUber] = useState(false);
 
-    // Controle dos modais
     const [modalCompra, setModalCompra] = useState(false);
     const [modalCorrida, setModalCorrida] = useState(false);
     const [modalEditar, setModalEditar] = useState(false);
+    const [modalPagamento, setModalPagamento] = useState(false);
     const [compraEditando, setCompraEditando] = useState<Compra | null>(null);
 
     async function buscarDados() {
@@ -106,7 +108,7 @@ export default function PaginaCompradorAdminCliente({ usuarioId }: Props) {
         return lista;
     }, [mesesFechados]);
 
-    const mesFechado = mesesFechados.some(
+    const mesFechado = mesesFechados.find(
         (mf) => mf.mes === mesSelecionado && mf.ano === anoSelecionado
     );
 
@@ -122,14 +124,18 @@ export default function PaginaCompradorAdminCliente({ usuarioId }: Props) {
         0
     );
     const totalUber = corridas.reduce((acc, c) => acc + c.valor, 0);
-    const totalMes = totalCompras + totalUber;
 
-    const dividaAnterior = useMemo(() => {
-        const mes = mesesFechados.find(
-            (mf) => mf.mes === mesSelecionado && mf.ano === anoSelecionado
+    // Dívida acumulada de meses anteriores
+    const totalDivida = mesesFechados
+        .filter(
+            (mf) => mf.ano * 12 + mf.mes < anoSelecionado * 12 + mesSelecionado
+        )
+        .reduce(
+            (acc, mf) => acc + Math.max(0, mf.totalDoMes - mf.totalPago),
+            0
         );
-        return mes?.dividaAnterior ?? 0;
-    }, [mesesFechados, mesSelecionado, anoSelecionado]);
+
+    const totalMes = totalCompras + totalUber + totalDivida;
 
     if (carregando) {
         return (
@@ -144,9 +150,7 @@ export default function PaginaCompradorAdminCliente({ usuarioId }: Props) {
             <Header nomeUsuario="Admin" />
 
             <main className="max-w-4xl mx-auto px-4 py-6 flex flex-col gap-4">
-                {/* Cabeçalho com nome e botão voltar */}
                 <div className="flex items-start justify-between">
-                    {/* Coluna esquerda: botão voltar + dados do usuário */}
                     <div className="flex flex-col items-start">
                         <Botao
                             cor="cinza"
@@ -164,13 +168,12 @@ export default function PaginaCompradorAdminCliente({ usuarioId }: Props) {
                         </p>
                     </div>
 
-                    {/* Coluna direita: botões de ação */}
                     <div className="flex gap-2">
                         {usuario?.usaUber && (
                             <Botao
                                 cor="amarelo"
                                 tamanho="sm"
-                                icone={<PlusCircle className="w-4 h-4" />}
+                                icone={<MoreHorizontal className="w-4 h-4" />}
                                 onClick={() => setModalCorrida(true)}
                             >
                                 Corrida
@@ -179,10 +182,9 @@ export default function PaginaCompradorAdminCliente({ usuarioId }: Props) {
                         <Botao
                             cor="verde"
                             tamanho="sm"
-                            icone={<PlusCircle className="w-4 h-4" />}
                             onClick={() => setModalCompra(true)}
                         >
-                            Compra
+                            + Compra
                         </Botao>
                     </div>
                 </div>
@@ -209,7 +211,13 @@ export default function PaginaCompradorAdminCliente({ usuarioId }: Props) {
                     />
                 )}
 
-                {/* Tabela de compras com botões editar/excluir */}
+                {/* Card de dívida anterior */}
+                <CardDividaAnterior
+                    mesesFechados={mesesFechados}
+                    mesSelecionado={mesSelecionado}
+                    anoSelecionado={anoSelecionado}
+                />
+
                 {comprasDoMes.length === 0 ? (
                     <div className="text-center py-12 text-zinc-500 text-sm">
                         Nenhuma compra neste mês.
@@ -316,31 +324,65 @@ export default function PaginaCompradorAdminCliente({ usuarioId }: Props) {
                     </div>
                 )}
 
-                {/* Rodapé com totais */}
-                <div className="flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3">
-                    <Badge status={mesFechado ? 'finalizado' : 'aberto'} />
+                {/* Rodapé com breakdown completo */}
+                <div className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 flex flex-col gap-2">
+                    {/* Status e botão de pagamento */}
+                    <div className="flex items-center justify-between">
+                        <Badge status={mesFechado ? 'finalizado' : 'aberto'} />
+                        {!mesFechado && (
+                            <Botao
+                                cor="azul"
+                                tamanho="sm"
+                                onClick={() => setModalPagamento(true)}
+                            >
+                                Efetuar pagamento
+                            </Botao>
+                        )}
+                        {mesFechado && (
+                            <span className="text-xs text-zinc-500">
+                                Pago: R${' '}
+                                {mesFechado.totalPago
+                                    .toFixed(2)
+                                    .replace('.', ',')}
+                            </span>
+                        )}
+                    </div>
 
-                    {dividaAnterior > 0 && (
-                        <div className="text-center">
-                            <p className="text-xs text-zinc-500">
-                                Dívida anterior
-                            </p>
-                            <p className="text-sm font-medium text-red-400">
-                                R$ {dividaAnterior.toFixed(2).replace('.', ',')}
-                            </p>
+                    {/* Breakdown dos valores */}
+                    <div className="border-t border-zinc-800 pt-2 flex flex-col gap-1">
+                        <div className="flex justify-between text-xs text-zinc-500">
+                            <span>Compras</span>
+                            <span>
+                                R$ {totalCompras.toFixed(2).replace('.', ',')}
+                            </span>
                         </div>
-                    )}
-
-                    <div className="text-right">
-                        <p className="text-xs text-zinc-500">Total do mês</p>
-                        <p className="text-base font-bold text-zinc-100">
-                            R$ {totalMes.toFixed(2).replace('.', ',')}
-                        </p>
+                        {totalUber > 0 && (
+                            <div className="flex justify-between text-xs text-zinc-500">
+                                <span>Uber</span>
+                                <span>
+                                    R$ {totalUber.toFixed(2).replace('.', ',')}
+                                </span>
+                            </div>
+                        )}
+                        {totalDivida > 0 && (
+                            <div className="flex justify-between text-xs text-red-400">
+                                <span>Dívida anterior</span>
+                                <span>
+                                    R${' '}
+                                    {totalDivida.toFixed(2).replace('.', ',')}
+                                </span>
+                            </div>
+                        )}
+                        <div className="flex justify-between text-sm font-bold text-zinc-100 border-t border-zinc-800 pt-1 mt-1">
+                            <span>Total do mês</span>
+                            <span>
+                                R$ {totalMes.toFixed(2).replace('.', ',')}
+                            </span>
+                        </div>
                     </div>
                 </div>
             </main>
 
-            {/* Modais */}
             <ModalCadastroCompra
                 aberto={modalCompra}
                 usuarioId={usuarioId}
@@ -353,7 +395,6 @@ export default function PaginaCompradorAdminCliente({ usuarioId }: Props) {
                 usuarioId={usuarioId}
                 onFechar={() => setModalCorrida(false)}
                 onSalvar={() => {
-                    // Rebusca corridas após cadastrar
                     if (!usuario?.usaUber) return;
                     fetch(
                         `/api/corridas/usuario?id=${usuarioId}&mes=${mesSelecionado}&ano=${anoSelecionado}`
@@ -372,6 +413,16 @@ export default function PaginaCompradorAdminCliente({ usuarioId }: Props) {
                     setModalEditar(false);
                     setCompraEditando(null);
                 }}
+                onSalvar={buscarDados}
+            />
+
+            <ModalPagamento
+                aberto={modalPagamento}
+                totalDoMes={totalMes}
+                usuarioId={usuarioId}
+                mes={mesSelecionado}
+                ano={anoSelecionado}
+                onFechar={() => setModalPagamento(false)}
                 onSalvar={buscarDados}
             />
         </div>
