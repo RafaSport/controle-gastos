@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Botao from './Botao';
 import Input from './Input';
 import Modal from './Modal';
+import { Toggle } from './Toggle';
 
 interface Props {
     aberto: boolean;
@@ -83,23 +84,8 @@ export default function ModalCadastroComprador({
                             Habilita controle de corridas
                         </p>
                     </div>
-                    <button
-                        type="button"
-                        onClick={() => setUsaUber(!usaUber)}
-                        className={`
-                            w-10 h-6 rounded-full transition-colors duration-200 relative
-                            ${usaUber ? 'bg-blue-600' : 'bg-zinc-600'}
-                        `}
-                    >
-                        {/* Bolinha do toggle */}
-                        <span
-                            className={`
-                            absolute top-0.5 w-5 h-5 bg-white rounded-full shadow
-                            transition-transform duration-200
-                            ${usaUber ? 'translate-x-4' : 'translate-x-0.5'}
-                        `}
-                        />
-                    </button>
+                    {/* Toggle padrão */}
+                    <Toggle value={usaUber} onChange={setUsaUber} />
                 </div>
 
                 {/* Aviso do login gerado automaticamente */}

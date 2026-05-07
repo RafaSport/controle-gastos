@@ -58,3 +58,14 @@ export async function alterarComprador(
 ) {
     return await usuarioRepo.atualizarComprador(id, dados);
 }
+
+export async function resetarSenha(id: string) {
+    // Busca o login do usuário para gerar a senha padrão
+    const usuario = await usuarioRepo.buscarUsuarioPorId(id);
+    if (!usuario) throw new Error('Usuário não encontrado');
+
+    const senhaPadrao = gerarSenhaPadrao(usuario.login);
+    const senhaCriptografada = await bcrypt.hash(senhaPadrao, 10);
+
+    return await usuarioRepo.resetarSenhaUsuario(id, senhaCriptografada);
+}

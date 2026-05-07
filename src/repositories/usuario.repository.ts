@@ -64,3 +64,14 @@ export async function atualizarComprador(
         data: dados,
     });
 }
+
+// Reseta a senha e marca primeiroLogin para forçar troca no próximo acesso
+export async function resetarSenhaUsuario(
+    id: string,
+    senhaCriptografada: string
+) {
+    return await (prisma as any).usuario.update({
+        where: { id },
+        data: { senha: senhaCriptografada, primeiroLogin: true },
+    });
+}
