@@ -36,6 +36,7 @@ async function main() {
         { nome: 'Carlos', sobrenome: 'Silva', usaUber: false },
         { nome: 'Marta', sobrenome: 'Lima', usaUber: false },
         { nome: 'João', sobrenome: 'Uber', usaUber: true },
+        { nome: 'Pedro', sobrenome: 'Teste', usaUber: false }, // comprador com muitas compras variadas
     ];
 
     const hoje = new Date();
@@ -53,8 +54,6 @@ async function main() {
 
         if (!existe) {
             const senha = await bcrypt.hash(`${login}123`, 10);
-
-            // Cria o comprador com o campo usaUber
             const usuario = await (prisma as any).usuario.create({
                 data: {
                     nome: c.nome,
@@ -66,17 +65,27 @@ async function main() {
                     usaUber: c.usaUber,
                 },
             });
-
             console.log(`✅ Comprador criado: ${login} / senha: ${login}123`);
 
-            // ==================== COMPRAS ====================
-            const comprasDoUsuario = gerarCompras(usuario.id, mes, ano);
-            for (const compra of comprasDoUsuario) {
-                await (prisma as any).compra.create({ data: compra });
+            // Compras padrão para todos exceto Pedro
+            if (c.nome !== 'Pedro') {
+                const compras = gerarComprasPadrao(usuario.id, mes, ano);
+                for (const compra of compras)
+                    await (prisma as any).compra.create({ data: compra });
+                console.log(`   └─ ${compras.length} compras criadas`);
             }
-            console.log(`   └─ ${comprasDoUsuario.length} compras criadas`);
 
-            // ==================== CORRIDAS (só quem usa Uber) ====================
+            // Compras variadas para Pedro — para testar ordenação
+            if (c.nome === 'Pedro') {
+                const compras = gerarComprasVariadas(usuario.id, mes, ano);
+                for (const compra of compras)
+                    await (prisma as any).compra.create({ data: compra });
+                console.log(
+                    `   └─ ${compras.length} compras criadas (variadas)`
+                );
+            }
+
+            // Corridas para quem usa Uber
             if (c.usaUber) {
                 const corridas = [
                     {
@@ -105,9 +114,8 @@ async function main() {
                         valor: 12.9,
                     },
                 ];
-                for (const corrida of corridas) {
+                for (const corrida of corridas)
                     await (prisma as any).corrida.create({ data: corrida });
-                }
                 console.log(
                     `   └─ ${corridas.length} corridas de Uber criadas`
                 );
@@ -118,8 +126,8 @@ async function main() {
     }
 }
 
-// Gera compras de exemplo para um usuário
-function gerarCompras(usuarioId: string, mes: number, ano: number) {
+// Compras padrão — 3 compras em cartões diferentes
+function gerarComprasPadrao(usuarioId: string, mes: number, ano: number) {
     return [
         {
             usuarioId,
@@ -130,8 +138,7 @@ function gerarCompras(usuarioId: string, mes: number, ano: number) {
             mesInicio: mes,
             anoInicio: ano,
             qtdParcelas: 10,
-            mesFinal: ((mes + 9 - 1) % 12) + 1,
-            anoFinal: ano + Math.floor((mes + 9 - 1) / 12),
+            ...calcFim(mes, ano, 10),
             valorParcela: 350.0,
         },
         {
@@ -143,8 +150,7 @@ function gerarCompras(usuarioId: string, mes: number, ano: number) {
             mesInicio: mes,
             anoInicio: ano,
             qtdParcelas: 3,
-            mesFinal: ((mes + 2 - 1) % 12) + 1,
-            anoFinal: ano + Math.floor((mes + 2 - 1) / 12),
+            ...calcFim(mes, ano, 3),
             valorParcela: 180.0,
         },
         {
@@ -156,11 +162,151 @@ function gerarCompras(usuarioId: string, mes: number, ano: number) {
             mesInicio: mes,
             anoInicio: ano,
             qtdParcelas: 6,
-            mesFinal: ((mes + 5 - 1) % 12) + 1,
-            anoFinal: ano + Math.floor((mes + 5 - 1) / 12),
+            ...calcFim(mes, ano, 6),
             valorParcela: 99.9,
         },
     ];
+}
+
+// Compras variadas para testar ordenação por cartão e por término
+function gerarComprasVariadas(usuarioId: string, mes: number, ano: number) {
+    return [
+        // NUBANK — 4 compras (mais compras, fica por último)
+        {
+            usuarioId,
+            cartao: Cartao.NUBANK,
+            descricao: 'Notebook Dell',
+            mesCompra: mes,
+            anoCompra: ano,
+            mesInicio: mes,
+            anoInicio: ano,
+            qtdParcelas: 12,
+            ...calcFim(mes, ano, 12),
+            valorParcela: 400.0,
+        },
+        {
+            usuarioId,
+            cartao: Cartao.NUBANK,
+            descricao: 'TV Samsung',
+            mesCompra: mes,
+            anoCompra: ano,
+            mesInicio: mes,
+            anoInicio: ano,
+            qtdParcelas: 8,
+            ...calcFim(mes, ano, 8),
+            valorParcela: 250.0,
+        },
+        {
+            usuarioId,
+            cartao: Cartao.NUBANK,
+            descricao: 'Fone Bluetooth',
+            mesCompra: mes,
+            anoCompra: ano,
+            mesInicio: mes,
+            anoInicio: ano,
+            qtdParcelas: 3,
+            ...calcFim(mes, ano, 3),
+            valorParcela: 90.0,
+        },
+        {
+            usuarioId,
+            cartao: Cartao.NUBANK,
+            descricao: 'Cadeira Gamer',
+            mesCompra: mes,
+            anoCompra: ano,
+            mesInicio: mes,
+            anoInicio: ano,
+            qtdParcelas: 6,
+            ...calcFim(mes, ano, 6),
+            valorParcela: 150.0,
+        },
+
+        // INTER — 3 compras (fica no meio)
+        {
+            usuarioId,
+            cartao: Cartao.INTER,
+            descricao: 'Tênis Nike',
+            mesCompra: mes,
+            anoCompra: ano,
+            mesInicio: mes,
+            anoInicio: ano,
+            qtdParcelas: 2,
+            ...calcFim(mes, ano, 2),
+            valorParcela: 180.0,
+        },
+        {
+            usuarioId,
+            cartao: Cartao.INTER,
+            descricao: 'Mochila',
+            mesCompra: mes,
+            anoCompra: ano,
+            mesInicio: mes,
+            anoInicio: ano,
+            qtdParcelas: 5,
+            ...calcFim(mes, ano, 5),
+            valorParcela: 75.0,
+        },
+        {
+            usuarioId,
+            cartao: Cartao.INTER,
+            descricao: 'Relógio',
+            mesCompra: mes,
+            anoCompra: ano,
+            mesInicio: mes,
+            anoInicio: ano,
+            qtdParcelas: 9,
+            ...calcFim(mes, ano, 9),
+            valorParcela: 120.0,
+        },
+
+        // ITAU — 2 compras (fica no meio)
+        {
+            usuarioId,
+            cartao: Cartao.ITAU,
+            descricao: 'Curso Online',
+            mesCompra: mes,
+            anoCompra: ano,
+            mesInicio: mes,
+            anoInicio: ano,
+            qtdParcelas: 4,
+            ...calcFim(mes, ano, 4),
+            valorParcela: 99.9,
+        },
+        {
+            usuarioId,
+            cartao: Cartao.ITAU,
+            descricao: 'Livros',
+            mesCompra: mes,
+            anoCompra: ano,
+            mesInicio: mes,
+            anoInicio: ano,
+            qtdParcelas: 7,
+            ...calcFim(mes, ano, 7),
+            valorParcela: 55.0,
+        },
+
+        // HIPER — 1 compra (menos compras, fica em cima)
+        {
+            usuarioId,
+            cartao: Cartao.HIPER,
+            descricao: 'Supermercado',
+            mesCompra: mes,
+            anoCompra: ano,
+            mesInicio: mes,
+            anoInicio: ano,
+            qtdParcelas: 3,
+            ...calcFim(mes, ano, 3),
+            valorParcela: 200.0,
+        },
+    ];
+}
+
+// Calcula mês e ano final de uma compra parcelada
+function calcFim(mes: number, ano: number, parcelas: number) {
+    const total = mes + parcelas - 1;
+    const mesFinal = ((total - 1) % 12) + 1;
+    const anoFinal = ano + Math.floor((total - 1) / 12);
+    return { mesFinal, anoFinal };
 }
 
 main()
