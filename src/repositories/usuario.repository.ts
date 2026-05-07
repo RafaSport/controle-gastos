@@ -50,3 +50,17 @@ export async function deletarUsuario(id: string) {
         where: { id },
     });
 }
+
+export async function atualizarComprador(
+    id: string,
+    dados: {
+        nome?: string;
+        sobrenome?: string;
+        usaUber?: boolean;
+    }
+) {
+    return await (prisma as any).usuario.update({
+        where: { id },
+        data: dados,
+    });
+}

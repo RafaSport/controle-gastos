@@ -1,0 +1,139 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import Botao from './Botao';
+import Input from './Input';
+import Modal from './Modal';
+
+interface Comprador {
+    id: string;
+    nome: string;
+    sobrenome: string;
+    usaUber: boolean;
+}
+
+interface Props {
+    aberto: boolean;
+    comprador: Comprador | null;
+    onFechar: () => void;
+    onSalvar: () => void;
+}
+
+export default function ModalEditarComprador({
+    aberto,
+    comprador,
+    onFechar,
+    onSalvar,
+}: Props) {
+    const [nome, setNome] = useState('');
+    const [sobrenome, setSobrenome] = useState('');
+    const [usaUber, setUsaUber] = useState(false);
+    const [erro, setErro] = useState('');
+    const [carregando, setCarregando] = useState(false);
+
+    // Preenche o formulário quando o comprador muda
+    useEffect(() => {
+        if (comprador) {
+            setNome(comprador.nome);
+            setSobrenome(comprador.sobrenome);
+            setUsaUber(comprador.usaUber);
+            setErro('');
+        }
+    }, [comprador]);
+
+    async function handleSalvar() {
+        setErro('');
+
+        if (!nome.trim() || !sobrenome.trim()) {
+            setErro('Nome e sobrenome são obrigatórios.');
+            return;
+        }
+
+        setCarregando(true);
+
+        const res = await fetch(`/api/usuarios/${comprador?.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                nome: nome.trim(),
+                sobrenome: sobrenome.trim(),
+                usaUber,
+            }),
+        });
+
+        setCarregando(false);
+
+        if (!res.ok) {
+            setErro('Erro ao atualizar comprador.');
+            return;
+        }
+
+        onSalvar();
+        onFechar();
+    }
+
+    return (
+        <Modal aberto={aberto} titulo="Editar Comprador" onFechar={onFechar}>
+            <div className="flex flex-col gap-4">
+                <Input
+                    label="Nome"
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
+                />
+
+                <Input
+                    label="Sobrenome"
+                    value={sobrenome}
+                    onChange={(e) => setSobrenome(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSalvar()}
+                />
+
+                {/* Toggle Uber */}
+                <div className="flex items-center justify-between bg-zinc-800 rounded-lg px-3 py-2.5">
+                    <div>
+                        <p className="text-sm text-zinc-200">Usa Uber</p>
+                        <p className="text-xs text-zinc-500">
+                            Habilita controle de corridas
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setUsaUber(!usaUber)}
+                        className={`w-10 h-6 rounded-full transition-colors duration-200 relative ${usaUber ? 'bg-blue-600' : 'bg-zinc-600'}`}
+                    >
+                        <span
+                            className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${usaUber ? 'translate-x-4' : 'translate-x-0.5'}`}
+                        />
+                    </button>
+                </div>
+
+                {/* Aviso que o login não muda */}
+                <div className="bg-zinc-800 rounded-lg px-3 py-2">
+                    <p className="text-xs text-zinc-500">
+                        ⚠ O login não é alterado ao editar o nome.
+                    </p>
+                </div>
+
+                {erro && (
+                    <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
+                        <span className="text-red-400 shrink-0">⚠</span>
+                        <p className="text-xs text-red-400">{erro}</p>
+                    </div>
+                )}
+
+                <div className="flex gap-2 justify-end">
+                    <Botao cor="cinza" onClick={onFechar}>
+                        Cancelar
+                    </Botao>
+                    <Botao
+                        cor="verde"
+                        carregando={carregando}
+                        onClick={handleSalvar}
+                    >
+                        Salvar
+                    </Botao>
+                </div>
+            </div>
+        </Modal>
+    );
+}

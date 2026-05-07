@@ -3,6 +3,8 @@
 import Header from '@/components/layout/Header';
 import Botao from '@/components/ui/Botao';
 import ModalCadastroComprador from '@/components/ui/ModalCadastroComprador';
+import ModalEditarComprador from '@/components/ui/ModalEditarComprador';
+import { Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
@@ -21,7 +23,10 @@ export default function PaginaAdminCliente() {
 
     const [compradores, setCompradores] = useState<Comprador[]>([]);
     const [carregando, setCarregando] = useState(true);
-    const [modalAberto, setModalAberto] = useState(false);
+    const [modalCadastro, setModalCadastro] = useState(false);
+    const [modalEditar, setModalEditar] = useState(false);
+    const [compradorEditando, setCompradorEditando] =
+        useState<Comprador | null>(null);
 
     async function buscarCompradores() {
         setCarregando(true);
@@ -35,12 +40,25 @@ export default function PaginaAdminCliente() {
         buscarCompradores();
     }, []);
 
+    async function handleExcluir(e: React.MouseEvent, id: string) {
+        // Impede que o clique na linha navegue para a tela do comprador
+        e.stopPropagation();
+        if (!confirm('Excluir este comprador e todas as suas compras?')) return;
+        await fetch(`/api/usuarios/${id}`, { method: 'DELETE' });
+        buscarCompradores();
+    }
+
+    function handleEditar(e: React.MouseEvent, comprador: Comprador) {
+        e.stopPropagation();
+        setCompradorEditando(comprador);
+        setModalEditar(true);
+    }
+
     return (
         <div className="min-h-screen bg-zinc-950">
             <Header nomeUsuario="Admin" />
 
             <main className="max-w-4xl mx-auto px-4 py-6 flex flex-col gap-4">
-                {/* Cabeçalho com título e botão de cadastro */}
                 <div className="flex items-center justify-between">
                     <h1 className="text-lg font-semibold text-zinc-100">
                         Compradores
@@ -48,13 +66,12 @@ export default function PaginaAdminCliente() {
                     <Botao
                         cor="verde"
                         tamanho="sm"
-                        onClick={() => setModalAberto(true)}
+                        onClick={() => setModalCadastro(true)}
                     >
                         + Novo Comprador
                     </Botao>
                 </div>
 
-                {/* Tabela de compradores */}
                 {carregando ? (
                     <div className="text-center py-12 text-zinc-500 text-sm">
                         Carregando...
@@ -80,11 +97,13 @@ export default function PaginaAdminCliente() {
                                     <th className="px-3 py-3 text-right">
                                         Total a pagar
                                     </th>
+                                    <th className="px-3 py-3 text-center">
+                                        Ações
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {compradores.map((c, index) => (
-                                    // Linha clicável — vai para a tela do comprador
                                     <tr
                                         key={c.id}
                                         onClick={() =>
@@ -126,6 +145,27 @@ export default function PaginaAdminCliente() {
                                                 .toFixed(2)
                                                 .replace('.', ',')}
                                         </td>
+                                        <td className="px-3 py-3">
+                                            <div className="flex gap-1 justify-center">
+                                                <Botao
+                                                    cor="amarelo"
+                                                    tamanho="sm"
+                                                    onClick={(e) =>
+                                                        handleEditar(e, c)
+                                                    }
+                                                >
+                                                    Editar
+                                                </Botao>
+                                                <Botao
+                                                    cor="vermelho"
+                                                    tamanho="sm"
+                                                    icone={<Trash2 size={14} />}
+                                                    onClick={(e) =>
+                                                        handleExcluir(e, c.id)
+                                                    }
+                                                />
+                                            </div>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -134,10 +174,19 @@ export default function PaginaAdminCliente() {
                 )}
             </main>
 
-            {/* Modal de cadastro de comprador */}
             <ModalCadastroComprador
-                aberto={modalAberto}
-                onFechar={() => setModalAberto(false)}
+                aberto={modalCadastro}
+                onFechar={() => setModalCadastro(false)}
+                onSalvar={buscarCompradores}
+            />
+
+            <ModalEditarComprador
+                aberto={modalEditar}
+                comprador={compradorEditando}
+                onFechar={() => {
+                    setModalEditar(false);
+                    setCompradorEditando(null);
+                }}
                 onSalvar={buscarCompradores}
             />
         </div>

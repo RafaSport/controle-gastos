@@ -10,7 +10,7 @@ import ModalCadastroCorrida from '@/components/ui/ModalCadastroCorrida';
 import ModalEditarCompra from '@/components/ui/ModalEditarCompra';
 import SeletorMes from '@/components/ui/SeletorMes';
 import { Cartao, Compra, Corrida, MesFechado, Usuario } from '@/types';
-import { ArrowLeft, MoreHorizontal } from 'lucide-react';
+import { ArrowLeft, PlusCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -170,7 +170,7 @@ export default function PaginaCompradorAdminCliente({ usuarioId }: Props) {
                             <Botao
                                 cor="amarelo"
                                 tamanho="sm"
-                                icone={<MoreHorizontal className="w-4 h-4" />}
+                                icone={<PlusCircle className="w-4 h-4" />}
                                 onClick={() => setModalCorrida(true)}
                             >
                                 Corrida
@@ -179,9 +179,10 @@ export default function PaginaCompradorAdminCliente({ usuarioId }: Props) {
                         <Botao
                             cor="verde"
                             tamanho="sm"
+                            icone={<PlusCircle className="w-4 h-4" />}
                             onClick={() => setModalCompra(true)}
                         >
-                            + Compra
+                            Compra
                         </Botao>
                     </div>
                 </div>

@@ -47,3 +47,14 @@ export async function alterarSenha(id: string, novaSenha: string) {
 export async function removerComprador(id: string) {
     return await usuarioRepo.deletarUsuario(id);
 }
+
+export async function alterarComprador(
+    id: string,
+    dados: {
+        nome?: string;
+        sobrenome?: string;
+        usaUber?: boolean;
+    }
+) {
+    return await usuarioRepo.atualizarComprador(id, dados);
+}
