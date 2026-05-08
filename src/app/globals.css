@@ -1,0 +1,27 @@
+@import 'tailwindcss';
+
+/* Variáveis globais de cor do sistema */
+:root {
+    /* Cores dos cartões */
+    --cor-nubank: #820ad1;
+    --cor-inter: #ff6600;
+    --cor-hiper: #cc0000;
+    --cor-itau: #003087;
+
+    /* Cores de status */
+    --cor-aberto: #22c55e;
+    --cor-finalizado: #71717a;
+}
+
+/* Scrollbar customizada para dark mode */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #18181b;
+}
+::-webkit-scrollbar-thumb {
+    background: #3f3f46;
+    border-radius: 3px;
+}

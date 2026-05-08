@@ -1,0 +1,80 @@
+generator client {
+  provider = "prisma-client"
+  engineType = "client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Papel {
+  ADMIN
+  COMPRADOR
+}
+
+enum Cartao {
+  NUBANK
+  INTER
+  HIPER
+  ITAU
+}
+
+model Usuario {
+  id            String   @id @default(uuid())
+  nome          String
+  sobrenome     String
+  login         String   @unique
+  senha         String
+  papel         Papel    @default(COMPRADOR)
+  primeiroLogin Boolean  @default(true)
+  usaUber       Boolean  @default(false) // indica se o comprador usa uber
+  criadoEm     DateTime @default(now())
+
+  compras       Compra[]
+  mesesFechados MesFechado[]
+  corridas      Corrida[]    // corridas de uber do comprador
+}
+
+model Compra {
+  id           String   @id @default(uuid())
+  usuarioId    String
+  cartao       Cartao
+  descricao    String
+  mesCompra    Int
+  anoCompra    Int
+  mesInicio    Int
+  anoInicio    Int
+  qtdParcelas  Int
+  mesFinal     Int
+  anoFinal     Int
+  valorParcela Float
+  criadoEm    DateTime @default(now())
+
+  usuario      Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+}
+
+model MesFechado {
+  id             String   @id @default(uuid())
+  usuarioId      String
+  mes            Int
+  ano            Int
+  totalDoMes     Float    @default(0)  // total que deveria ser pago
+  totalPago      Float    @default(0)  // valor efetivamente pago
+  dividaAnterior Float    @default(0)  // saldo acumulado de meses anteriores
+
+  usuario        Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@unique([usuarioId, mes, ano])
+}
+
+// Registra cada corrida de uber individualmente
+model Corrida {
+  id        String   @id @default(uuid())
+  usuarioId String
+  data      DateTime // data da corrida
+  valor     Float    // valor da corrida
+  criadoEm DateTime @default(now())
+
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+}
