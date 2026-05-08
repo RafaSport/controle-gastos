@@ -1,4 +1,2 @@
-import { handlers } from '@/lib/auth';
-
-// Exporta os handlers GET e POST do Auth.js para o Next.js
+import { handlers } from '@/lib/auth-server';
 export const { GET, POST } = handlers;

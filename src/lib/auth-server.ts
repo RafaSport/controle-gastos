@@ -1,8 +1,10 @@
+import bcrypt from 'bcryptjs';
 import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
+import { prisma } from './prisma';
 
-// auth.ts não importa Prisma diretamente — o authorize fica no servidor
-// O middleware usa apenas o JWT para verificar a sessão
+// Configuração completa do Auth.js para uso no servidor (API routes)
+// Nunca importar este arquivo no middleware
 export const { handlers, signIn, signOut, auth } = NextAuth({
     pages: {
         signIn: '/login',
@@ -17,9 +19,28 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 login: { label: 'Login', type: 'text' },
                 senha: { label: 'Senha', type: 'password' },
             },
-            // authorize fica vazio aqui — a lógica real está na route handler
-            async authorize() {
-                return null;
+            async authorize(credentials) {
+                const login = credentials?.login as string;
+                const senha = credentials?.senha as string;
+
+                if (!login?.trim() || !senha?.trim()) return null;
+
+                const usuario = await (prisma as any).usuario.findUnique({
+                    where: { login: login.trim() },
+                });
+
+                if (!usuario) return null;
+
+                const senhaValida = await bcrypt.compare(senha, usuario.senha);
+                if (!senhaValida) return null;
+
+                return {
+                    id: usuario.id,
+                    name: usuario.nome,
+                    email: usuario.login,
+                    papel: usuario.papel,
+                    primeiroLogin: usuario.primeiroLogin,
+                };
             },
         }),
     ],
