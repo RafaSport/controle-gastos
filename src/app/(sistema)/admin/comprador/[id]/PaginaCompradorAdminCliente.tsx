@@ -5,14 +5,14 @@ import Badge from '@/components/ui/Badge';
 import Botao from '@/components/ui/Botao';
 import CardDividaAnterior from '@/components/ui/CardDividaAnterior';
 import CardUber from '@/components/ui/CardUber';
-import CartaoTag from '@/components/ui/CartaoTag';
 import ModalCadastroCompra from '@/components/ui/ModalCadastroCompra';
 import ModalCadastroCorrida from '@/components/ui/ModalCadastroCorrida';
 import ModalEditarCompra from '@/components/ui/ModalEditarCompra';
 import ModalPagamento from '@/components/ui/ModalPagamento';
 import SeletorMes from '@/components/ui/SeletorMes';
-import { Cartao, Compra, Corrida, MesFechado, Usuario } from '@/types';
-import { ArrowLeft, MoreHorizontal } from 'lucide-react';
+import TabelaCompras from '@/components/ui/TabelaCompras';
+import { Compra, Corrida, MesFechado, Usuario } from '@/types';
+import { ArrowLeft, PlusCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -174,7 +174,7 @@ export default function PaginaCompradorAdminCliente({ usuarioId }: Props) {
                             <Botao
                                 cor="amarelo"
                                 tamanho="sm"
-                                icone={<MoreHorizontal className="w-4 h-4" />}
+                                icone={<PlusCircle className="w-4 h-4" />}
                                 onClick={() => setModalCorrida(true)}
                             >
                                 Corrida
@@ -183,9 +183,10 @@ export default function PaginaCompradorAdminCliente({ usuarioId }: Props) {
                         <Botao
                             cor="verde"
                             tamanho="sm"
+                            icone={<PlusCircle className="w-4 h-4" />}
                             onClick={() => setModalCompra(true)}
                         >
-                            + Compra
+                            Compra
                         </Botao>
                     </div>
                 </div>
@@ -219,111 +220,32 @@ export default function PaginaCompradorAdminCliente({ usuarioId }: Props) {
                     anoSelecionado={anoSelecionado}
                 />
 
-                {comprasDoMes.length === 0 ? (
-                    <div className="text-center py-12 text-zinc-500 text-sm">
-                        Nenhuma compra neste mês.
-                    </div>
-                ) : (
-                    <div className="w-full overflow-x-auto rounded-lg border border-zinc-800">
-                        <table className="w-full text-sm min-w-[700px]">
-                            <thead>
-                                <tr className="bg-zinc-800 text-zinc-400 text-xs uppercase tracking-wide">
-                                    <th className="px-3 py-3 text-left">
-                                        Cartão
-                                    </th>
-                                    <th className="px-3 py-3 text-left">
-                                        Descrição
-                                    </th>
-                                    <th className="px-3 py-3 text-center">
-                                        Início
-                                    </th>
-                                    <th className="px-3 py-3 text-center">
-                                        Parcelas
-                                    </th>
-                                    <th className="px-3 py-3 text-center">
-                                        Término
-                                    </th>
-                                    <th className="px-3 py-3 text-right">
-                                        Valor
-                                    </th>
-                                    <th className="px-3 py-3 text-center">
-                                        Ações
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {comprasDoMes.map((compra, index) => (
-                                    <tr
-                                        key={compra.id}
-                                        className={
-                                            index % 2 === 0
-                                                ? 'bg-zinc-900'
-                                                : 'bg-zinc-800'
-                                        }
-                                    >
-                                        <td className="px-3 py-3">
-                                            <CartaoTag
-                                                cartao={compra.cartao as Cartao}
-                                            />
-                                        </td>
-                                        <td className="px-3 py-3 text-zinc-200">
-                                            {compra.descricao}
-                                        </td>
-                                        <td className="px-3 py-3 text-center text-zinc-400">
-                                            {MESES[compra.mesInicio - 1]}/
-                                            {compra.anoInicio}
-                                        </td>
-                                        <td className="px-3 py-3 text-center text-zinc-400">
-                                            {anoSelecionado * 12 +
-                                                mesSelecionado -
-                                                (compra.anoInicio * 12 +
-                                                    compra.mesInicio) +
-                                                1}
-                                            /{compra.qtdParcelas}
-                                        </td>
-                                        <td className="px-3 py-3 text-center text-zinc-400">
-                                            {MESES[compra.mesFinal - 1]}/
-                                            {compra.anoFinal}
-                                        </td>
-                                        <td className="px-3 py-3 text-right font-medium text-zinc-100">
-                                            R${' '}
-                                            {compra.valorParcela
-                                                .toFixed(2)
-                                                .replace('.', ',')}
-                                        </td>
-                                        <td className="px-3 py-3">
-                                            <div className="flex gap-1 justify-center">
-                                                <Botao
-                                                    cor="amarelo"
-                                                    tamanho="sm"
-                                                    onClick={() => {
-                                                        setCompraEditando(
-                                                            compra
-                                                        );
-                                                        setModalEditar(true);
-                                                    }}
-                                                >
-                                                    Editar
-                                                </Botao>
-                                                <Botao
-                                                    cor="vermelho"
-                                                    tamanho="sm"
-                                                    onClick={() =>
-                                                        handleExcluirCompra(
-                                                            compra.id
-                                                        )
-                                                    }
-                                                >
-                                                    Excluir
-                                                </Botao>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
+                <TabelaCompras
+                    compras={compras}
+                    mesSelecionado={mesSelecionado}
+                    anoSelecionado={anoSelecionado}
+                    acoes={(compra) => (
+                        <>
+                            <Botao
+                                cor="amarelo"
+                                tamanho="sm"
+                                onClick={() => {
+                                    setCompraEditando(compra);
+                                    setModalEditar(true);
+                                }}
+                            >
+                                Editar
+                            </Botao>
+                            <Botao
+                                cor="vermelho"
+                                tamanho="sm"
+                                onClick={() => handleExcluirCompra(compra.id)}
+                            >
+                                Excluir
+                            </Botao>
+                        </>
+                    )}
+                />
 
                 {/* Rodapé com breakdown completo */}
                 <div className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 flex flex-col gap-2">

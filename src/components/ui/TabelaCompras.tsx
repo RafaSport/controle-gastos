@@ -5,6 +5,8 @@ interface TabelaComprasProps {
     compras: Compra[];
     mesSelecionado: number;
     anoSelecionado: number;
+    // Prop opcional — se passada, renderiza coluna de ações (visão admin)
+    acoes?: (compra: Compra) => React.ReactNode;
 }
 
 const MESES = [
@@ -52,6 +54,7 @@ export default function TabelaCompras({
     compras,
     mesSelecionado,
     anoSelecionado,
+    acoes,
 }: TabelaComprasProps) {
     const comprasDoMes = compras.filter((c) => {
         const ini = c.anoInicio * 12 + c.mesInicio;
@@ -86,18 +89,20 @@ export default function TabelaCompras({
                         <th className="px-3 py-3 text-center">Parcelas</th>
                         <th className="px-3 py-3 text-center">Término</th>
                         <th className="px-3 py-3 text-right">Valor</th>
+                        {/* Coluna de ações só aparece na visão admin */}
+                        {acoes && (
+                            <th className="px-3 py-3 text-center">Ações</th>
+                        )}
                     </tr>
                 </thead>
                 <tbody>
                     {ordenadas.map((compra, index) => (
                         <tr
                             key={compra.id}
-                            // Zebrado: linha par mais escura, ímpar mais clara
                             className={
                                 index % 2 === 0 ? 'bg-zinc-900' : 'bg-zinc-800'
                             }
                         >
-                            {/* Primeira coluna com cor de fundo do cartão */}
                             <td className="px-2 py-2">
                                 <CartaoTag cartao={compra.cartao as Cartao} />
                             </td>
@@ -126,6 +131,14 @@ export default function TabelaCompras({
                                     .toFixed(2)
                                     .replace('.', ',')}
                             </td>
+                            {/* Renderiza ações se a prop foi passada */}
+                            {acoes && (
+                                <td className="px-2 py-2">
+                                    <div className="flex gap-1 justify-center">
+                                        {acoes(compra)}
+                                    </div>
+                                </td>
+                            )}
                         </tr>
                     ))}
                 </tbody>
