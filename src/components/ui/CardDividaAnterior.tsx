@@ -41,11 +41,11 @@ export default function CardDividaAnterior({
         return ehAnterior && temDivida;
     });
 
-    // Total acumulado de dívidas anteriores
-    const totalDivida = mesesComDivida.reduce(
-        (acc, mf) => acc + (mf.totalDoMes - mf.totalPago),
-        0
-    );
+    // Total da dívida apenas do mês anterior
+    const ultimoMes = mesesComDivida[mesesComDivida.length - 1];
+    const totalDivida = ultimoMes
+        ? ultimoMes.totalDoMes - ultimoMes.totalPago
+        : 0;
 
     if (totalDivida <= 0) return null;
 
@@ -151,7 +151,7 @@ export default function CardDividaAnterior({
                     </div>
 
                     {/* Total geral da dívida */}
-                    <div className="flex justify-end">
+                    {/* <div className="flex justify-end">
                         <div className="text-right">
                             <p className="text-xs text-zinc-500">
                                 Total da dívida
@@ -160,7 +160,7 @@ export default function CardDividaAnterior({
                                 R$ {totalDivida.toFixed(2).replace('.', ',')}
                             </p>
                         </div>
-                    </div>
+                    </div> */}
                 </div>
             </Modal>
         </>

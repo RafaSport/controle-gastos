@@ -93,14 +93,16 @@ export default function PaginaCompradorCliente({
 
     const totalUber = corridas.reduce((acc, c) => acc + c.valor, 0);
 
-    const totalDivida = mesesFechados
+    // Dívida rolante — apenas a diferença do último mês fechado
+    const ultimoMesFechado = mesesFechados
         .filter(
             (mf) => mf.ano * 12 + mf.mes < anoSelecionado * 12 + mesSelecionado
         )
-        .reduce(
-            (acc, mf) => acc + Math.max(0, mf.totalDoMes - mf.totalPago),
-            0
-        );
+        .sort((a, b) => b.ano * 12 + b.mes - (a.ano * 12 + a.mes))[0];
+
+    const totalDivida = ultimoMesFechado
+        ? Math.max(0, ultimoMesFechado.totalDoMes - ultimoMesFechado.totalPago)
+        : 0;
 
     const totalMes = totalCompras + totalUber + totalDivida;
 

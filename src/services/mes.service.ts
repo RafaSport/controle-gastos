@@ -14,7 +14,7 @@ export async function fecharMes(
 ) {
     const compras = await compraRepo.buscarComprasPorUsuario(usuarioId);
 
-    // Soma parcelas ativas no mês
+    // Soma parcelas ativas no mês atual
     const totalCompras = compras
         .filter((c: any) => {
             const ini = c.anoInicio * 12 + c.mesInicio;
@@ -24,32 +24,34 @@ export async function fecharMes(
         })
         .reduce((acc: number, c: any) => acc + c.valorParcela, 0);
 
-    // Soma corridas do mês se houver
+    // Soma corridas do mês
     const corridas = await corridaRepo.buscarCorridasDoMes(usuarioId, mes, ano);
     const totalCorridas = corridas.reduce(
         (acc: number, c: any) => acc + c.valor,
         0
     );
 
-    // Busca dívida acumulada de meses anteriores
+    // Busca o último mês fechado antes deste para pegar a dívida rolante
     const mesesAnteriores = await mesRepo.buscarMesesFechados(usuarioId);
-    const dividaAnterior = mesesAnteriores
+    const ultimoMes = mesesAnteriores
         .filter((mf: any) => mf.ano * 12 + mf.mes < ano * 12 + mes)
-        .reduce(
-            (acc: number, mf: any) => acc + (mf.totalDoMes - mf.totalPago),
-            0
-        );
+        .sort((a: any, b: any) => b.ano * 12 + b.mes - (a.ano * 12 + a.mes))[0];
 
-    const totalDoMes =
-        totalCompras + totalCorridas + Math.max(0, dividaAnterior);
+    // Dívida anterior é apenas a dívida do último mês fechado
+    // pois ela já estava embutida no totalDoMes daquele mês
+    const dividaAnterior = ultimoMes
+        ? Math.max(0, ultimoMes.totalDoMes - ultimoMes.totalPago)
+        : 0;
 
-    // Diferença negativa significa que pagou mais do que devia
+    // Total do mês = compras + uber + dívida rolante do mês anterior
+    const totalDoMes = totalCompras + totalCorridas + dividaAnterior;
+
     return await mesRepo.fecharMes({
         usuarioId,
         mes,
         ano,
         totalDoMes,
         totalPago,
-        dividaAnterior: Math.max(0, dividaAnterior),
+        dividaAnterior,
     });
 }
