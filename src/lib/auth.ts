@@ -1,7 +1,12 @@
 import bcrypt from 'bcryptjs';
 import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
-import { prisma } from './prisma';
+
+// Importação lazy do Prisma para evitar erro no Edge Runtime do middleware
+async function buscarUsuario(login: string) {
+    const { prisma } = await import('./prisma');
+    return await (prisma as any).usuario.findUnique({ where: { login } });
+}
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
     pages: {
@@ -19,33 +24,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             },
 
             async authorize(credentials) {
-                // LOG para ver o que está chegando
-                console.log('>>> authorize chamado com:', credentials);
+                const login = credentials?.login as string;
+                const senha = credentials?.senha as string;
 
-                const { login, senha } = credentials as {
-                    login: string;
-                    senha: string;
-                };
+                if (!login?.trim() || !senha?.trim()) return null;
 
-                if (!login || !senha) {
-                    console.log('>>> login ou senha vazios, retornando null');
-                    return null;
-                }
-
-                const usuario = await (prisma as any).usuario.findUnique({
-                    where: { login },
-                });
-
-                console.log(
-                    '>>> usuario encontrado:',
-                    usuario ? usuario.login : 'nenhum'
-                );
-
+                // Importa o Prisma dinamicamente — não executa no Edge
+                const usuario = await buscarUsuario(login.trim());
                 if (!usuario) return null;
 
                 const senhaValida = await bcrypt.compare(senha, usuario.senha);
-                console.log('>>> senha válida:', senhaValida);
-
                 if (!senhaValida) return null;
 
                 return {
@@ -58,6 +46,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             },
         }),
     ],
+
     callbacks: {
         async jwt({ token, user }) {
             if (user) {
@@ -67,6 +56,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             }
             return token;
         },
+
         async session({ session, token }) {
             session.user.id = token.id as string;
             (session.user as any).papel = token.papel;

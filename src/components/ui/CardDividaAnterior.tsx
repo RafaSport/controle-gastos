@@ -149,18 +149,6 @@ export default function CardDividaAnterior({
                             </tbody>
                         </table>
                     </div>
-
-                    {/* Total geral da dívida */}
-                    {/* <div className="flex justify-end">
-                        <div className="text-right">
-                            <p className="text-xs text-zinc-500">
-                                Total da dívida
-                            </p>
-                            <p className="text-base font-bold text-red-400">
-                                R$ {totalDivida.toFixed(2).replace('.', ',')}
-                            </p>
-                        </div>
-                    </div> */}
                 </div>
             </Modal>
         </>
