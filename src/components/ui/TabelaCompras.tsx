@@ -1,6 +1,8 @@
 import { Cartao, Compra } from '@/types';
 import CartaoTag from './CartaoTag';
+import TabelaBase, { Coluna } from '../base/TabelaBase';
 
+// Props específicas da tabela de compras
 interface TabelaComprasProps {
     compras: Compra[];
     mesSelecionado: number;
@@ -9,6 +11,7 @@ interface TabelaComprasProps {
     acoes?: (compra: Compra) => React.ReactNode;
 }
 
+// Array de meses para exibição
 const MESES = [
     'Jan',
     'Fev',
@@ -24,6 +27,7 @@ const MESES = [
     'Dez',
 ];
 
+// Função para ordenar compras conforme regras de negócio
 function ordenarCompras(compras: Compra[], mes: number, ano: number): Compra[] {
     const contagemPorCartao: Record<string, number> = {};
     compras.forEach((c) => {
@@ -56,6 +60,7 @@ export default function TabelaCompras({
     anoSelecionado,
     acoes,
 }: TabelaComprasProps) {
+    // Filtra compras do mês selecionado
     const comprasDoMes = compras.filter((c) => {
         const ini = c.anoInicio * 12 + c.mesInicio;
         const fim = c.anoFinal * 12 + c.mesFinal;
@@ -63,86 +68,61 @@ export default function TabelaCompras({
         return ini <= sel && fim >= sel;
     });
 
+    // Ordena conforme regras
     const ordenadas = ordenarCompras(
         comprasDoMes,
         mesSelecionado,
         anoSelecionado
     );
 
-    if (ordenadas.length === 0) {
-        return (
-            <div className="text-center py-12 text-zinc-500 text-sm">
-                Nenhuma compra neste mês.
-            </div>
-        );
-    }
+    // Define colunas da tabela
+    const colunas: Coluna<Compra>[] = [
+        {
+            header: 'Cartão',
+            render: (compra) => <CartaoTag cartao={compra.cartao as Cartao} />,
+        },
+        {
+            header: 'Descrição',
+            render: (compra) => compra.descricao,
+        },
+        {
+            header: 'Mês compra',
+            render: (compra) =>
+                `${MESES[compra.mesCompra - 1]}/${compra.anoCompra}`,
+            align: 'center',
+        },
+        {
+            header: 'Início',
+            render: (compra) =>
+                `${MESES[compra.mesInicio - 1]}/${compra.anoInicio}`,
+            align: 'center',
+        },
+        {
+            header: 'Parcelas',
+            render: (compra) =>
+                `${anoSelecionado * 12 + mesSelecionado - (compra.anoInicio * 12 + compra.mesInicio) + 1}/${compra.qtdParcelas}`,
+            align: 'center',
+        },
+        {
+            header: 'Término',
+            render: (compra) =>
+                `${MESES[compra.mesFinal - 1]}/${compra.anoFinal}`,
+            align: 'center',
+        },
+        {
+            header: 'Valor',
+            render: (compra) =>
+                `R$ ${compra.valorParcela.toFixed(2).replace('.', ',')}`,
+            align: 'right',
+        },
+    ];
 
     return (
-        <div className="w-full overflow-x-auto rounded-lg border border-zinc-800">
-            <table className="w-full text-sm min-w-[640px]">
-                <thead>
-                    <tr className="bg-zinc-800 text-zinc-400 text-xs uppercase tracking-wide">
-                        <th className="px-3 py-3 text-left">Cartão</th>
-                        <th className="px-3 py-3 text-left">Descrição</th>
-                        <th className="px-3 py-3 text-center">Mês compra</th>
-                        <th className="px-3 py-3 text-center">Início</th>
-                        <th className="px-3 py-3 text-center">Parcelas</th>
-                        <th className="px-3 py-3 text-center">Término</th>
-                        <th className="px-3 py-3 text-right">Valor</th>
-                        {/* Coluna de ações só aparece na visão admin */}
-                        {acoes && (
-                            <th className="px-3 py-3 text-center">Ações</th>
-                        )}
-                    </tr>
-                </thead>
-                <tbody>
-                    {ordenadas.map((compra, index) => (
-                        <tr
-                            key={compra.id}
-                            className={
-                                index % 2 === 0 ? 'bg-zinc-900' : 'bg-zinc-800'
-                            }
-                        >
-                            <td className="px-2 py-2">
-                                <CartaoTag cartao={compra.cartao as Cartao} />
-                            </td>
-                            <td className="px-2 py-2 text-zinc-200">
-                                {compra.descricao}
-                            </td>
-                            <td className="px-2 py-2 text-center text-zinc-400">
-                                {MESES[compra.mesCompra - 1]}/{compra.anoCompra}
-                            </td>
-                            <td className="px-2 py-2 text-center text-zinc-400">
-                                {MESES[compra.mesInicio - 1]}/{compra.anoInicio}
-                            </td>
-                            <td className="px-2 py-2 text-center text-zinc-400">
-                                {anoSelecionado * 12 +
-                                    mesSelecionado -
-                                    (compra.anoInicio * 12 + compra.mesInicio) +
-                                    1}
-                                /{compra.qtdParcelas}
-                            </td>
-                            <td className="px-2 py-2 text-center text-zinc-400">
-                                {MESES[compra.mesFinal - 1]}/{compra.anoFinal}
-                            </td>
-                            <td className="px-2 py-2 text-right font-medium text-zinc-100">
-                                R${' '}
-                                {compra.valorParcela
-                                    .toFixed(2)
-                                    .replace('.', ',')}
-                            </td>
-                            {/* Renderiza ações se a prop foi passada */}
-                            {acoes && (
-                                <td className="px-2 py-2">
-                                    <div className="flex gap-1 justify-center">
-                                        {acoes(compra)}
-                                    </div>
-                                </td>
-                            )}
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
+        <TabelaBase
+            dados={ordenadas}
+            colunas={colunas}
+            acoes={acoes}
+            emptyMessage="Nenhuma compra neste mês."
+        />
     );
 }
