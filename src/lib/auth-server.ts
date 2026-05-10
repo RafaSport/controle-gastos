@@ -6,6 +6,7 @@ import { prisma } from './prisma';
 // Configuração completa do Auth.js para uso no servidor (API routes)
 // Nunca importar este arquivo no middleware
 export const { handlers, signIn, signOut, auth } = NextAuth({
+    trustHost: true, // necessário em produção para localhost
     pages: {
         signIn: '/login',
     },

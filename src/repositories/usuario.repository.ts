@@ -30,6 +30,7 @@ export async function criarUsuario(dados: {
     sobrenome: string;
     login: string;
     senha: string;
+    usaUber: boolean;
 }) {
     return await (prisma as any).usuario.create({
         data: { ...dados, papel: 'COMPRADOR' },

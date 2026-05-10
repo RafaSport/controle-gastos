@@ -1,7 +1,7 @@
 'use client';
 
 import { Cartao } from '@/types';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Botao from './Botao';
 import Input from './Input';
 import Modal from './Modal';
@@ -20,6 +20,12 @@ const NOMES_CARTAO: Record<Cartao, string> = {
     HIPER: 'Hiper',
     ITAU: 'Itaú',
 };
+const CORES_CARTAO: Record<Cartao, string> = {
+    NUBANK: '#820AD1',
+    INTER: '#FF6600',
+    HIPER: '#CC0000',
+    ITAU: '#003087',
+};
 const MESES = [
     'Jan',
     'Fev',
@@ -35,6 +41,11 @@ const MESES = [
     'Dez',
 ];
 
+// Converte mês+ano para número total de meses (para comparação)
+function emMeses(mes: number, ano: number) {
+    return ano * 12 + mes;
+}
+
 export default function ModalCadastroCompra({
     aberto,
     usuarioId,
@@ -42,19 +53,66 @@ export default function ModalCadastroCompra({
     onSalvar,
 }: Props) {
     const hoje = new Date();
+    const mesAtual = hoje.getMonth() + 1;
+    const anoAtual = hoje.getFullYear();
 
     const [cartao, setCartao] = useState<Cartao>('NUBANK');
     const [descricao, setDescricao] = useState('');
-    const [mesCompra, setMesCompra] = useState(hoje.getMonth() + 1);
-    const [anoCompra, setAnoCompra] = useState(hoje.getFullYear());
-    const [mesInicio, setMesInicio] = useState(hoje.getMonth() + 1);
-    const [anoInicio, setAnoInicio] = useState(hoje.getFullYear());
+    const [mesCompra, setMesCompra] = useState(mesAtual);
+    const [anoCompra, setAnoCompra] = useState(anoAtual);
+    const [mesInicio, setMesInicio] = useState(mesAtual);
+    const [anoInicio, setAnoInicio] = useState(anoAtual);
     const [qtdParcelas, setQtdParcelas] = useState(1);
     const [valorParcela, setValorParcela] = useState('');
     const [erro, setErro] = useState('');
+    const [alerta, setAlerta] = useState('');
     const [carregando, setCarregando] = useState(false);
 
-    // Calcula e exibe o mês final automaticamente
+    // Reseta o formulário sempre que o modal abre
+    useEffect(() => {
+        if (aberto) {
+            const agora = new Date();
+            const m = agora.getMonth() + 1;
+            const a = agora.getFullYear();
+            setCartao('NUBANK');
+            setDescricao('');
+            setMesCompra(m);
+            setAnoCompra(a);
+            setMesInicio(m);
+            setAnoInicio(a);
+            setQtdParcelas(1);
+            setValorParcela('');
+            setErro('');
+            setAlerta('');
+        }
+    }, [aberto]);
+
+    // Garante que o início nunca fique antes da compra
+    // e dispara alerta se o início for 3+ meses depois
+    useEffect(() => {
+        const compraEmMeses = emMeses(mesCompra, anoCompra);
+        const inicioEmMeses = emMeses(mesInicio, anoInicio);
+        const diferencaMeses = inicioEmMeses - compraEmMeses;
+
+        // Corrige automaticamente se início ficou antes da compra
+        if (inicioEmMeses < compraEmMeses) {
+            setMesInicio(mesCompra);
+            setAnoInicio(anoCompra);
+            setAlerta('');
+            return;
+        }
+
+        // Alerta amigável se início for 3+ meses depois da compra
+        if (diferencaMeses >= 3) {
+            const nomeMesInicio = MESES[mesInicio - 1];
+            setAlerta(
+                `O pagamento só começa em ${nomeMesInicio}/${anoInicio}, que é ${diferencaMeses} meses depois da compra. Isso está certo?`
+            );
+        } else {
+            setAlerta('');
+        }
+    }, [mesCompra, anoCompra, mesInicio, anoInicio]);
+
     function calcularMesFinal() {
         const total = mesInicio + qtdParcelas - 1;
         const mesFinal = ((total - 1) % 12) + 1;
@@ -69,7 +127,7 @@ export default function ModalCadastroCompra({
             setErro('Descrição obrigatória.');
             return;
         }
-        if (!valorParcela || parseFloat(valorParcela) <= 0) {
+        if (!valorParcela || parseFloat(valorParcela.replace(',', '.')) <= 0) {
             setErro('Valor inválido.');
             return;
         }
@@ -99,10 +157,6 @@ export default function ModalCadastroCompra({
             return;
         }
 
-        // Limpa e fecha
-        setDescricao('');
-        setValorParcela('');
-        setQtdParcelas(1);
         onSalvar();
         onFechar();
     }
@@ -128,14 +182,7 @@ export default function ModalCadastroCompra({
                                 onClick={() => setCartao(c)}
                                 style={
                                     cartao === c
-                                        ? {
-                                              backgroundColor: {
-                                                  NUBANK: '#820AD1',
-                                                  INTER: '#FF6600',
-                                                  HIPER: '#CC0000',
-                                                  ITAU: '#003087',
-                                              }[c],
-                                          }
+                                        ? { backgroundColor: CORES_CARTAO[c] }
                                         : {}
                                 }
                                 className={`
@@ -184,7 +231,7 @@ export default function ModalCadastroCompra({
                     />
                 </div>
 
-                {/* Mês e ano de início */}
+                {/* Mês e ano de início — nunca antes da compra */}
                 <div className="grid grid-cols-2 gap-3">
                     <div className="flex flex-col gap-1">
                         <label className="text-sm font-medium text-zinc-300">
@@ -197,11 +244,21 @@ export default function ModalCadastroCompra({
                             }
                             className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
-                            {MESES.map((m, i) => (
-                                <option key={i} value={i + 1}>
-                                    {m}
-                                </option>
-                            ))}
+                            {MESES.map((m, i) => {
+                                // Desabilita meses anteriores ao mês de compra no mesmo ano
+                                const desabilitado =
+                                    anoInicio === anoCompra &&
+                                    i + 1 < mesCompra;
+                                return (
+                                    <option
+                                        key={i}
+                                        value={i + 1}
+                                        disabled={desabilitado}
+                                    >
+                                        {m}
+                                    </option>
+                                );
+                            })}
                         </select>
                     </div>
                     <Input
@@ -211,6 +268,16 @@ export default function ModalCadastroCompra({
                         onChange={(e) => setAnoInicio(Number(e.target.value))}
                     />
                 </div>
+
+                {/* Alerta de início muito distante da compra */}
+                {alerta && (
+                    <div className="flex items-start gap-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg px-3 py-2">
+                        <span className="text-yellow-400 shrink-0 mt-0.5">
+                            ⚠
+                        </span>
+                        <p className="text-xs text-yellow-400">{alerta}</p>
+                    </div>
+                )}
 
                 {/* Parcelas e valor */}
                 <div className="grid grid-cols-2 gap-3">

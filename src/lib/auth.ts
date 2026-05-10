@@ -4,6 +4,7 @@ import Credentials from 'next-auth/providers/credentials';
 // auth.ts não importa Prisma diretamente — o authorize fica no servidor
 // O middleware usa apenas o JWT para verificar a sessão
 export const { handlers, signIn, signOut, auth } = NextAuth({
+    trustHost: true, // necessário em produção para localhost
     pages: {
         signIn: '/login',
     },
