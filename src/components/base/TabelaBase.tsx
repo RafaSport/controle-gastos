@@ -11,6 +11,8 @@ interface TabelaBaseProps<T> {
     colunas: Coluna<T>[];
     acoes?: (item: T) => React.ReactNode;
     emptyMessage?: string;
+    // Função para extrair chave única de cada linha — evita problemas com reordenação
+    keyExtractor?: (item: T, index: number) => string;
 }
 
 export default function TabelaBase<T>({
@@ -18,6 +20,7 @@ export default function TabelaBase<T>({
     colunas,
     acoes,
     emptyMessage = 'Nenhum registro encontrado.',
+    keyExtractor,
 }: TabelaBaseProps<T>) {
     if (dados.length === 0) {
         return (
@@ -48,7 +51,9 @@ export default function TabelaBase<T>({
                 <tbody>
                     {dados.map((item, index) => (
                         <tr
-                            key={index}
+                            key={
+                                keyExtractor ? keyExtractor(item, index) : index
+                            }
                             className={
                                 index % 2 === 0 ? 'bg-zinc-900' : 'bg-zinc-800'
                             }

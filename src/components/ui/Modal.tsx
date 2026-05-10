@@ -1,3 +1,4 @@
+import { X } from 'lucide-react';
 import { useEffect } from 'react';
 import Botao from './Botao';
 
@@ -54,9 +55,13 @@ export default function Modal({
                     <h2 className="text-base font-semibold text-zinc-100">
                         {titulo}
                     </h2>
-                    <Botao cor="cinza" tamanho="sm" onClick={onFechar}>
-                        ✕
-                    </Botao>
+                    <Botao
+                        cor="cinza"
+                        tamanho="sm"
+                        onClick={onFechar}
+                        icone={<X size={18} strokeWidth={2.5} />}
+                        aria-label="Fechar"
+                    ></Botao>
                 </div>
 
                 {/* Conteúdo passado como children */}
