@@ -11,8 +11,9 @@ interface TabelaBaseProps<T> {
     colunas: Coluna<T>[];
     acoes?: (item: T) => React.ReactNode;
     emptyMessage?: string;
-    // Função para extrair chave única de cada linha — evita problemas com reordenação
     keyExtractor?: (item: T, index: number) => string;
+    // Linha clicável — usado na tabela de compradores
+    onRowClick?: (item: T) => void;
 }
 
 export default function TabelaBase<T>({
@@ -21,6 +22,7 @@ export default function TabelaBase<T>({
     acoes,
     emptyMessage = 'Nenhum registro encontrado.',
     keyExtractor,
+    onRowClick,
 }: TabelaBaseProps<T>) {
     if (dados.length === 0) {
         return (
@@ -54,9 +56,13 @@ export default function TabelaBase<T>({
                             key={
                                 keyExtractor ? keyExtractor(item, index) : index
                             }
-                            className={
-                                index % 2 === 0 ? 'bg-zinc-900' : 'bg-zinc-800'
+                            onClick={
+                                onRowClick ? () => onRowClick(item) : undefined
                             }
+                            className={`
+                                ${index % 2 === 0 ? 'bg-zinc-900' : 'bg-zinc-800'}
+                                ${onRowClick ? 'cursor-pointer hover:bg-blue-500/10 transition-colors duration-100' : ''}
+                            `}
                         >
                             {colunas.map((col, i) => (
                                 <td
