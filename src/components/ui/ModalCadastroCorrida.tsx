@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Botao from './Botao';
 import Input from './Input';
 import Modal from './Modal';
@@ -12,6 +12,21 @@ interface Props {
     onSalvar: () => void;
 }
 
+// Formata uma data para o formato yyyy-mm-dd usado pelo input type="date"
+function formatarData(data: Date): string {
+    return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-${String(data.getDate()).padStart(2, '0')}`;
+}
+
+// Calcula a diferença em dias entre duas datas
+function diferencaEmDias(dataStr: string): number {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const dataSel = new Date(dataStr + 'T00:00:00');
+    return Math.round(
+        (hoje.getTime() - dataSel.getTime()) / (1000 * 60 * 60 * 24)
+    );
+}
+
 export default function ModalCadastroCorrida({
     aberto,
     usuarioId,
@@ -19,12 +34,42 @@ export default function ModalCadastroCorrida({
     onSalvar,
 }: Props) {
     const hoje = new Date();
-    const dataHoje = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;
+    const dataHoje = formatarData(hoje);
 
     const [data, setData] = useState(dataHoje);
     const [valor, setValor] = useState('');
     const [erro, setErro] = useState('');
+    const [alerta, setAlerta] = useState('');
     const [carregando, setCarregando] = useState(false);
+
+    // Reseta o formulário sempre que o modal abre
+    useEffect(() => {
+        if (aberto) {
+            setData(formatarData(new Date()));
+            setValor('');
+            setErro('');
+            setAlerta('');
+        }
+    }, [aberto]);
+
+    // Verifica alerta sempre que a data muda
+    useEffect(() => {
+        if (!data) return;
+        const dias = diferencaEmDias(data);
+
+        // Alerta se a corrida foi há 3 ou mais dias
+        if (dias >= 3) {
+            setAlerta(`Esta corrida foi há ${dias} dias. Tem certeza da data?`);
+        } else {
+            setAlerta('');
+        }
+    }, [data]);
+
+    function handleMudancaData(novaData: string) {
+        // Bloqueia datas futuras — não deixa selecionar
+        if (novaData > dataHoje) return;
+        setData(novaData);
+    }
 
     async function handleSalvar() {
         setErro('');
@@ -33,8 +78,12 @@ export default function ModalCadastroCorrida({
             setErro('Data obrigatória.');
             return;
         }
-        if (!valor || parseFloat(valor) <= 0) {
+        if (!valor || parseFloat(valor.replace(',', '.')) <= 0) {
             setErro('Valor inválido.');
+            return;
+        }
+        if (data > dataHoje) {
+            setErro('Não é possível cadastrar corridas futuras.');
             return;
         }
 
@@ -57,8 +106,6 @@ export default function ModalCadastroCorrida({
             return;
         }
 
-        setData(dataHoje);
-        setValor('');
         onSalvar();
         onFechar();
     }
@@ -70,8 +117,19 @@ export default function ModalCadastroCorrida({
                     label="Data da corrida"
                     type="date"
                     value={data}
-                    onChange={(e) => setData(e.target.value)}
+                    max={dataHoje} // desabilita dias futuros no seletor
+                    onChange={(e) => handleMudancaData(e.target.value)}
                 />
+
+                {/* Alerta para datas muito antigas */}
+                {alerta && (
+                    <div className="flex items-start gap-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg px-3 py-2">
+                        <span className="text-yellow-400 shrink-0 mt-0.5">
+                            ⚠
+                        </span>
+                        <p className="text-xs text-yellow-400">{alerta}</p>
+                    </div>
+                )}
 
                 <Input
                     label="Valor (R$)"
