@@ -12,6 +12,12 @@ const inter = Inter({
 export const metadata: Metadata = {
     title: 'Controle de Gastos',
     description: 'Sistema de controle de gastos com cartões',
+    icons: {
+        icon: '/icon.png', // favicon no browser
+        apple: '/icon.png', // ícone no iPhone/iPad
+        shortcut: '/icon.png', // atalho na tela inicial Android
+    },
+    manifest: '/manifest.json', // necessário para Android
 };
 
 export default function RootLayout({
