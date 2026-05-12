@@ -41,7 +41,6 @@ const MESES = [
     'Dez',
 ];
 
-// Converte mês+ano para número total de meses (para comparação)
 function emMeses(mes: number, ano: number) {
     return ano * 12 + mes;
 }
@@ -65,7 +64,8 @@ export default function ModalCadastroCompra({
     const [qtdParcelas, setQtdParcelas] = useState(1);
     const [valorParcela, setValorParcela] = useState('');
     const [erro, setErro] = useState('');
-    const [alerta, setAlerta] = useState('');
+    const [alertaInicio, setAlertaInicio] = useState('');
+    const [alertaCompra, setAlertaCompra] = useState('');
     const [carregando, setCarregando] = useState(false);
 
     // Reseta o formulário sempre que o modal abre
@@ -83,33 +83,53 @@ export default function ModalCadastroCompra({
             setQtdParcelas(1);
             setValorParcela('');
             setErro('');
-            setAlerta('');
+            setAlertaInicio('');
+            setAlertaCompra('');
         }
     }, [aberto]);
 
-    // Garante que o início nunca fique antes da compra
-    // e dispara alerta se o início for 3+ meses depois
+    // Valida o mês da compra — não pode ser futuro, alerta se 3+ meses atrás
+    useEffect(() => {
+        const compraEmMeses = emMeses(mesCompra, anoCompra);
+        const atualEmMeses = emMeses(mesAtual, anoAtual);
+        const diferencaMeses = atualEmMeses - compraEmMeses;
+
+        if (compraEmMeses > atualEmMeses) {
+            // Corrige automaticamente para o mês atual se tentar colocar futuro
+            setMesCompra(mesAtual);
+            setAnoCompra(anoAtual);
+            setAlertaCompra('');
+            return;
+        }
+
+        if (diferencaMeses >= 3) {
+            setAlertaCompra(
+                `Esta compra foi há ${diferencaMeses} meses (${MESES[mesCompra - 1]}/${anoCompra}). Isso está certo?`
+            );
+        } else {
+            setAlertaCompra('');
+        }
+    }, [mesCompra, anoCompra]);
+
+    // Valida o mês de início — nunca antes da compra, alerta se 3+ meses depois
     useEffect(() => {
         const compraEmMeses = emMeses(mesCompra, anoCompra);
         const inicioEmMeses = emMeses(mesInicio, anoInicio);
         const diferencaMeses = inicioEmMeses - compraEmMeses;
 
-        // Corrige automaticamente se início ficou antes da compra
         if (inicioEmMeses < compraEmMeses) {
             setMesInicio(mesCompra);
             setAnoInicio(anoCompra);
-            setAlerta('');
+            setAlertaInicio('');
             return;
         }
 
-        // Alerta amigável se início for 3+ meses depois da compra
         if (diferencaMeses >= 3) {
-            const nomeMesInicio = MESES[mesInicio - 1];
-            setAlerta(
-                `O pagamento só começa em ${nomeMesInicio}/${anoInicio}, que é ${diferencaMeses} meses depois da compra. Isso está certo?`
+            setAlertaInicio(
+                `O pagamento só começa em ${MESES[mesInicio - 1]}/${anoInicio}, que é ${diferencaMeses} meses depois da compra. Isso está certo?`
             );
         } else {
-            setAlerta('');
+            setAlertaInicio('');
         }
     }, [mesCompra, anoCompra, mesInicio, anoInicio]);
 
@@ -151,7 +171,6 @@ export default function ModalCadastroCompra({
         });
 
         setCarregando(false);
-
         if (!res.ok) {
             setErro('Erro ao cadastrar compra.');
             return;
@@ -203,7 +222,7 @@ export default function ModalCadastroCompra({
                     onChange={(e) => setDescricao(e.target.value)}
                 />
 
-                {/* Mês e ano da compra */}
+                {/* Mês e ano da compra — não pode ser futuro */}
                 <div className="grid grid-cols-2 gap-3">
                     <div className="flex flex-col gap-1">
                         <label className="text-sm font-medium text-zinc-300">
@@ -216,20 +235,43 @@ export default function ModalCadastroCompra({
                             }
                             className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
-                            {MESES.map((m, i) => (
-                                <option key={i} value={i + 1}>
-                                    {m}
-                                </option>
-                            ))}
+                            {MESES.map((m, i) => {
+                                // Desabilita meses futuros no mesmo ano
+                                const desabilitado =
+                                    anoCompra === anoAtual && i + 1 > mesAtual;
+                                return (
+                                    <option
+                                        key={i}
+                                        value={i + 1}
+                                        disabled={desabilitado}
+                                    >
+                                        {m}
+                                    </option>
+                                );
+                            })}
                         </select>
                     </div>
                     <Input
                         label="Ano da compra"
                         type="number"
                         value={anoCompra}
+                        // Não permite ano futuro
+                        max={anoAtual}
                         onChange={(e) => setAnoCompra(Number(e.target.value))}
                     />
                 </div>
+
+                {/* Alerta de compra muito antiga */}
+                {alertaCompra && (
+                    <div className="flex items-start gap-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg px-3 py-2">
+                        <span className="text-yellow-400 shrink-0 mt-0.5">
+                            ⚠
+                        </span>
+                        <p className="text-xs text-yellow-400">
+                            {alertaCompra}
+                        </p>
+                    </div>
+                )}
 
                 {/* Mês e ano de início — nunca antes da compra */}
                 <div className="grid grid-cols-2 gap-3">
@@ -245,7 +287,6 @@ export default function ModalCadastroCompra({
                             className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
                             {MESES.map((m, i) => {
-                                // Desabilita meses anteriores ao mês de compra no mesmo ano
                                 const desabilitado =
                                     anoInicio === anoCompra &&
                                     i + 1 < mesCompra;
@@ -270,12 +311,14 @@ export default function ModalCadastroCompra({
                 </div>
 
                 {/* Alerta de início muito distante da compra */}
-                {alerta && (
+                {alertaInicio && (
                     <div className="flex items-start gap-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg px-3 py-2">
                         <span className="text-yellow-400 shrink-0 mt-0.5">
                             ⚠
                         </span>
-                        <p className="text-xs text-yellow-400">{alerta}</p>
+                        <p className="text-xs text-yellow-400">
+                            {alertaInicio}
+                        </p>
                     </div>
                 )}
 
