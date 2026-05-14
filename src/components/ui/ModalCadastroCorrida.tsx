@@ -8,16 +8,16 @@ import Modal from './Modal';
 interface Props {
     aberto: boolean;
     usuarioId: string;
+    mesEmAberto: number; // mês em aberto para associar a corrida
+    anoEmAberto: number;
     onFechar: () => void;
     onSalvar: () => void;
 }
 
-// Formata uma data para o formato yyyy-mm-dd usado pelo input type="date"
 function formatarData(data: Date): string {
     return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-${String(data.getDate()).padStart(2, '0')}`;
 }
 
-// Calcula a diferença em dias entre duas datas
 function diferencaEmDias(dataStr: string): number {
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
@@ -27,9 +27,26 @@ function diferencaEmDias(dataStr: string): number {
     );
 }
 
+const MESES = [
+    'Jan',
+    'Fev',
+    'Mar',
+    'Abr',
+    'Mai',
+    'Jun',
+    'Jul',
+    'Ago',
+    'Set',
+    'Out',
+    'Nov',
+    'Dez',
+];
+
 export default function ModalCadastroCorrida({
     aberto,
     usuarioId,
+    mesEmAberto,
+    anoEmAberto,
     onFechar,
     onSalvar,
 }: Props) {
@@ -42,7 +59,6 @@ export default function ModalCadastroCorrida({
     const [alerta, setAlerta] = useState('');
     const [carregando, setCarregando] = useState(false);
 
-    // Reseta o formulário sempre que o modal abre
     useEffect(() => {
         if (aberto) {
             setData(formatarData(new Date()));
@@ -52,12 +68,9 @@ export default function ModalCadastroCorrida({
         }
     }, [aberto]);
 
-    // Verifica alerta sempre que a data muda
     useEffect(() => {
         if (!data) return;
         const dias = diferencaEmDias(data);
-
-        // Alerta se a corrida foi há 3 ou mais dias
         if (dias >= 3) {
             setAlerta(`Esta corrida foi há ${dias} dias. Tem certeza da data?`);
         } else {
@@ -66,7 +79,6 @@ export default function ModalCadastroCorrida({
     }, [data]);
 
     function handleMudancaData(novaData: string) {
-        // Bloqueia datas futuras — não deixa selecionar
         if (novaData > dataHoje) return;
         setData(novaData);
     }
@@ -82,10 +94,12 @@ export default function ModalCadastroCorrida({
             setErro('Valor inválido.');
             return;
         }
-        if (data > dataHoje) {
-            setErro('Não é possível cadastrar corridas futuras.');
-            return;
-        }
+
+        // Mantém o dia da corrida mas associa ao mês em aberto
+        const diaCorrente = data.split('-')[2];
+        const diasNoMes = new Date(anoEmAberto, mesEmAberto, 0).getDate();
+        const diaSalvo = Math.min(parseInt(diaCorrente), diasNoMes);
+        const dataSalva = `${anoEmAberto}-${String(mesEmAberto).padStart(2, '0')}-${String(diaSalvo).padStart(2, '0')}`;
 
         setCarregando(true);
 
@@ -94,13 +108,12 @@ export default function ModalCadastroCorrida({
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 usuarioId,
-                data,
+                data: dataSalva,
                 valor: parseFloat(valor.replace(',', '.')),
             }),
         });
 
         setCarregando(false);
-
         if (!res.ok) {
             setErro('Erro ao cadastrar corrida.');
             return;
@@ -117,11 +130,20 @@ export default function ModalCadastroCorrida({
                     label="Data da corrida"
                     type="date"
                     value={data}
-                    max={dataHoje} // desabilita dias futuros no seletor
+                    max={dataHoje}
                     onChange={(e) => handleMudancaData(e.target.value)}
                 />
 
-                {/* Alerta para datas muito antigas */}
+                {/* Aviso de qual mês receberá a corrida */}
+                <div className="bg-zinc-800 rounded-lg px-3 py-2">
+                    <p className="text-xs text-zinc-400">
+                        Corrida será lançada em:
+                        <span className="text-blue-400 font-medium ml-1">
+                            {MESES[mesEmAberto - 1]}/{anoEmAberto}
+                        </span>
+                    </p>
+                </div>
+
                 {alerta && (
                     <div className="flex items-start gap-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg px-3 py-2">
                         <span className="text-yellow-400 shrink-0 mt-0.5">

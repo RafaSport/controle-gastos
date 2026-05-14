@@ -62,6 +62,29 @@ export default function PaginaCompradorCliente({
         buscarCorridas();
     }, [usuario, mesSelecionado, anoSelecionado]);
 
+    // Calcula o primeiro mês em aberto (>= hoje que não foi fechado)
+    const { mesEmAberto, anoEmAberto } = useMemo(() => {
+        const mesReal = hoje.getMonth() + 1;
+        const anoReal = hoje.getFullYear();
+
+        // Verifica se o mês real está fechado e avança até encontrar um aberto
+        let m = mesReal;
+        let a = anoReal;
+        while (mesesFechados.some((mf) => mf.mes === m && mf.ano === a)) {
+            m = m === 12 ? 1 : m + 1;
+            a = m === 1 ? a + 1 : a;
+        }
+        return { mesEmAberto: m, anoEmAberto: a };
+    }, [mesesFechados]);
+
+    // Inicializa o seletor no mês em aberto quando os dados carregam
+    useEffect(() => {
+        if (!carregando) {
+            setMesSelecionado(mesEmAberto);
+            setAnoSelecionado(anoEmAberto);
+        }
+    }, [carregando]);
+
     const mesesDisponiveis = useMemo(() => {
         const lista = [];
         for (let i = -3; i <= 9; i++) {
@@ -93,7 +116,6 @@ export default function PaginaCompradorCliente({
 
     const totalUber = corridas.reduce((acc, c) => acc + c.valor, 0);
 
-    // Dívida rolante — apenas a diferença do último mês fechado
     const ultimoMesFechado = mesesFechados
         .filter(
             (mf) => mf.ano * 12 + mf.mes < anoSelecionado * 12 + mesSelecionado
@@ -122,8 +144,8 @@ export default function PaginaCompradorCliente({
                 <SeletorMes
                     mesSelecionado={mesSelecionado}
                     anoSelecionado={anoSelecionado}
-                    mesAtual={hoje.getMonth() + 1}
-                    anoAtual={hoje.getFullYear()}
+                    mesAtual={mesEmAberto}
+                    anoAtual={anoEmAberto}
                     mesesDisponiveis={mesesDisponiveis}
                     onChange={(mes, ano) => {
                         setMesSelecionado(mes);
@@ -141,7 +163,6 @@ export default function PaginaCompradorCliente({
                     />
                 )}
 
-                {/* Card de dívida anterior */}
                 <CardDividaAnterior
                     mesesFechados={mesesFechados}
                     mesSelecionado={mesSelecionado}
@@ -154,7 +175,6 @@ export default function PaginaCompradorCliente({
                     anoSelecionado={anoSelecionado}
                 />
 
-                {/* Rodapé com breakdown completo */}
                 <div className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 flex flex-col gap-2">
                     <div className="flex items-center justify-between">
                         <Badge status={mesFechado ? 'finalizado' : 'aberto'} />
