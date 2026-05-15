@@ -112,8 +112,10 @@ export default function PaginaCompradorCliente({
     const mesesDisponiveis = useMemo(() => {
         const lista = [];
 
-        for (let i = -3; i <= 9; i++) {
-            const data = new Date(hoje.getFullYear(), hoje.getMonth() + i, 1);
+        // Mantem o primeiro mes em aberto sempre na terceira posicao do seletor.
+        // As duas primeiras posicoes servem como historico visual de meses anteriores.
+        for (let i = -2; i <= 10; i++) {
+            const data = new Date(anoEmAberto, mesEmAberto - 1 + i, 1);
 
             const m = data.getMonth() + 1;
             const a = data.getFullYear();
@@ -130,7 +132,7 @@ export default function PaginaCompradorCliente({
         }
 
         return lista;
-    }, [mesesFechados]);
+    }, [anoEmAberto, mesEmAberto, mesesFechados]);
 
     const mesFechado = mesesFechados.find(
         (mf) => mf.mes === mesSelecionado && mf.ano === anoSelecionado
