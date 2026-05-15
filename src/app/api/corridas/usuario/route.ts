@@ -1,7 +1,8 @@
+import { exigirAdminOuProprioUsuario } from '@/lib/api-auth';
 import { listarCorridas } from '@/services/corrida.service';
 import { NextRequest, NextResponse } from 'next/server';
 
-// Recebe usuarioId, mes e ano via query string
+// Recebe usuarioId, mes e ano via query string.
 export async function GET(req: NextRequest) {
     try {
         const { searchParams } = new URL(req.url);
@@ -11,14 +12,22 @@ export async function GET(req: NextRequest) {
 
         if (!usuarioId || !mes || !ano) {
             return NextResponse.json(
-                { erro: 'Parâmetros obrigatórios.' },
+                { erro: 'Parametros obrigatorios.' },
                 { status: 400 }
             );
         }
 
+        // Corridas so podem ser vistas pelo admin ou pelo comprador dono delas.
+        const permissao = await exigirAdminOuProprioUsuario(usuarioId);
+        if (!permissao.autorizado) return permissao.resposta;
+
         const corridas = await listarCorridas(usuarioId, mes, ano);
+
         return NextResponse.json(corridas);
-    } catch (erro: any) {
-        return NextResponse.json({ erro: erro.message }, { status: 500 });
+    } catch (erro: unknown) {
+        return NextResponse.json(
+            { erro: erro instanceof Error ? erro.message : 'Erro interno.' },
+            { status: 500 }
+        );
     }
 }
