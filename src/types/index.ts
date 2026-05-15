@@ -49,6 +49,8 @@ export interface Corrida {
     id: string;
     usuarioId: string;
     data: string;
+    mesReferencia: number;
+    anoReferencia: number;
     valor: number;
 }
 

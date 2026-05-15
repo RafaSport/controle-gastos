@@ -166,14 +166,14 @@ export default function PaginaCompradorCliente({
 
     if (carregando) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-zinc-950">
+            <div className="flex-1 flex items-center justify-center bg-zinc-950">
                 <span className="text-zinc-500 text-sm">Carregando...</span>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-zinc-950">
+        <div className="flex-1 bg-zinc-950">
             <Header nomeUsuario={nomeUsuario} />
 
             <main className="max-w-4xl mx-auto px-4 py-6 flex flex-col gap-4">

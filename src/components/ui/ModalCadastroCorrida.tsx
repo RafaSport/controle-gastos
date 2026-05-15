@@ -8,23 +8,10 @@ import Modal from './Modal';
 interface Props {
     aberto: boolean;
     usuarioId: string;
-    mesEmAberto: number; // mês em aberto para associar a corrida
+    mesEmAberto: number;
     anoEmAberto: number;
     onFechar: () => void;
     onSalvar: () => void;
-}
-
-function formatarData(data: Date): string {
-    return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-${String(data.getDate()).padStart(2, '0')}`;
-}
-
-function diferencaEmDias(dataStr: string): number {
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-    const dataSel = new Date(dataStr + 'T00:00:00');
-    return Math.round(
-        (hoje.getTime() - dataSel.getTime()) / (1000 * 60 * 60 * 24)
-    );
 }
 
 const MESES = [
@@ -41,6 +28,21 @@ const MESES = [
     'Nov',
     'Dez',
 ];
+
+function formatarData(data: Date): string {
+    return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-${String(data.getDate()).padStart(2, '0')}`;
+}
+
+function diferencaEmDias(dataStr: string): number {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
+    const dataSelecionada = new Date(`${dataStr}T00:00:00`);
+
+    return Math.round(
+        (hoje.getTime() - dataSelecionada.getTime()) / (1000 * 60 * 60 * 24)
+    );
+}
 
 export default function ModalCadastroCorrida({
     aberto,
@@ -70,9 +72,11 @@ export default function ModalCadastroCorrida({
 
     useEffect(() => {
         if (!data) return;
+
         const dias = diferencaEmDias(data);
+
         if (dias >= 3) {
-            setAlerta(`Esta corrida foi há ${dias} dias. Tem certeza da data?`);
+            setAlerta(`Esta corrida foi ha ${dias} dias. Tem certeza da data?`);
         } else {
             setAlerta('');
         }
@@ -87,19 +91,14 @@ export default function ModalCadastroCorrida({
         setErro('');
 
         if (!data) {
-            setErro('Data obrigatória.');
-            return;
-        }
-        if (!valor || parseFloat(valor.replace(',', '.')) <= 0) {
-            setErro('Valor inválido.');
+            setErro('Data obrigatoria.');
             return;
         }
 
-        // Mantém o dia da corrida mas associa ao mês em aberto
-        const diaCorrente = data.split('-')[2];
-        const diasNoMes = new Date(anoEmAberto, mesEmAberto, 0).getDate();
-        const diaSalvo = Math.min(parseInt(diaCorrente), diasNoMes);
-        const dataSalva = `${anoEmAberto}-${String(mesEmAberto).padStart(2, '0')}-${String(diaSalvo).padStart(2, '0')}`;
+        if (!valor || parseFloat(valor.replace(',', '.')) <= 0) {
+            setErro('Valor invalido.');
+            return;
+        }
 
         setCarregando(true);
 
@@ -108,12 +107,15 @@ export default function ModalCadastroCorrida({
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 usuarioId,
-                data: dataSalva,
+                data,
+                mesReferencia: mesEmAberto,
+                anoReferencia: anoEmAberto,
                 valor: parseFloat(valor.replace(',', '.')),
             }),
         });
 
         setCarregando(false);
+
         if (!res.ok) {
             setErro('Erro ao cadastrar corrida.');
             return;
@@ -134,10 +136,10 @@ export default function ModalCadastroCorrida({
                     onChange={(e) => handleMudancaData(e.target.value)}
                 />
 
-                {/* Aviso de qual mês receberá a corrida */}
+                {/* Informa em qual mes financeiro a corrida sera cobrada. */}
                 <div className="bg-zinc-800 rounded-lg px-3 py-2">
                     <p className="text-xs text-zinc-400">
-                        Corrida será lançada em:
+                        Corrida sera lancada em:
                         <span className="text-blue-400 font-medium ml-1">
                             {MESES[mesEmAberto - 1]}/{anoEmAberto}
                         </span>
@@ -147,7 +149,7 @@ export default function ModalCadastroCorrida({
                 {alerta && (
                     <div className="flex items-start gap-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg px-3 py-2">
                         <span className="text-yellow-400 shrink-0 mt-0.5">
-                            ⚠
+                            !
                         </span>
                         <p className="text-xs text-yellow-400">{alerta}</p>
                     </div>
@@ -163,7 +165,7 @@ export default function ModalCadastroCorrida({
 
                 {erro && (
                     <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
-                        <span className="text-red-400 shrink-0">⚠</span>
+                        <span className="text-red-400 shrink-0">!</span>
                         <p className="text-xs text-red-400">{erro}</p>
                     </div>
                 )}

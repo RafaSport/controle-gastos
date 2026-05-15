@@ -20,11 +20,15 @@ export async function listarCorridas(
 export async function cadastrarCorrida(dados: {
     usuarioId: string;
     data: string;
+    mesReferencia: number;
+    anoReferencia: number;
     valor: number;
 }) {
     return await corridaRepo.criarCorrida({
         usuarioId: dados.usuarioId,
         data: criarDataLocalDaCorrida(dados.data),
+        mesReferencia: dados.mesReferencia,
+        anoReferencia: dados.anoReferencia,
         valor: dados.valor,
     });
 }

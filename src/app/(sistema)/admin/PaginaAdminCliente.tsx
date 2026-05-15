@@ -128,7 +128,7 @@ export default function PaginaAdminCliente() {
     ];
 
     return (
-        <div className="min-h-screen bg-zinc-950">
+        <div className="flex-1 bg-zinc-950">
             <Header nomeUsuario={session.user?.name ?? 'Admin'} />
 
             <main className="max-w-4xl mx-auto px-4 py-6 flex flex-col gap-4">

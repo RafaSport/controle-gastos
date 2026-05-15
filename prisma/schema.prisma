@@ -70,11 +70,13 @@ model MesFechado {
 
 // Registra cada corrida de uber individualmente
 model Corrida {
-  id        String   @id @default(uuid())
-  usuarioId String
-  data      DateTime // data da corrida
-  valor     Float    // valor da corrida
-  criadoEm DateTime @default(now())
+  id            String   @id @default(uuid())
+  usuarioId     String
+  data          DateTime // data real em que a corrida aconteceu
+  mesReferencia Int      // mes financeiro em que a corrida sera cobrada
+  anoReferencia Int      // ano financeiro em que a corrida sera cobrada
+  valor         Float    // valor da corrida
+  criadoEm      DateTime @default(now())
 
-  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  usuario       Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 }
