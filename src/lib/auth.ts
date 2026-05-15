@@ -1,29 +1,81 @@
+import bcrypt from 'bcryptjs';
 import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
+import { prisma } from './prisma';
 
-// auth.ts não importa Prisma diretamente — o authorize fica no servidor
-// O middleware usa apenas o JWT para verificar a sessão
+const TEMPO_MAXIMO_SESSAO = 3 * 60; // 3 minutos em segundos
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
-    trustHost: true, // necessário em produção para localhost
+    trustHost: true,
+
     pages: {
         signIn: '/login',
     },
+
     session: {
         strategy: 'jwt',
+
+        // Define por quanto tempo a sessão JWT pode continuar válida.
+        // Se o usuário fechar o navegador e ficar fora por esse tempo, precisará logar novamente.
+        maxAge: TEMPO_MAXIMO_SESSAO,
     },
+
+    jwt: {
+        // Mantém o tempo de validade do token alinhado com o tempo da sessão.
+        maxAge: TEMPO_MAXIMO_SESSAO,
+    },
+
     providers: [
         Credentials({
             name: 'credentials',
+
             credentials: {
-                login: { label: 'Login', type: 'text' },
-                senha: { label: 'Senha', type: 'password' },
+                login: {
+                    label: 'Login',
+                    type: 'text',
+                },
+
+                senha: {
+                    label: 'Senha',
+                    type: 'password',
+                },
             },
-            // authorize fica vazio aqui — a lógica real está na route handler
-            async authorize() {
-                return null;
+
+            async authorize(credentials) {
+                const login = credentials?.login as string;
+                const senha = credentials?.senha as string;
+
+                if (!login?.trim() || !senha?.trim()) {
+                    return null;
+                }
+
+                const usuario = await (prisma as any).usuario.findUnique({
+                    where: {
+                        login: login.trim(),
+                    },
+                });
+
+                if (!usuario) {
+                    return null;
+                }
+
+                const senhaValida = await bcrypt.compare(senha, usuario.senha);
+
+                if (!senhaValida) {
+                    return null;
+                }
+
+                return {
+                    id: usuario.id,
+                    name: usuario.nome,
+                    email: usuario.login,
+                    papel: usuario.papel,
+                    primeiroLogin: usuario.primeiroLogin,
+                };
             },
         }),
     ],
+
     callbacks: {
         async jwt({ token, user }) {
             if (user) {
@@ -31,12 +83,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 token.papel = (user as any).papel;
                 token.primeiroLogin = (user as any).primeiroLogin;
             }
+
             return token;
         },
+
         async session({ session, token }) {
             session.user.id = token.id as string;
+
             (session.user as any).papel = token.papel;
             (session.user as any).primeiroLogin = token.primeiroLogin;
+
             return session;
         },
     },

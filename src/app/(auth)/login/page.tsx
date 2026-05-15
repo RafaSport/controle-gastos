@@ -2,6 +2,7 @@
 
 import Botao from '@/components/ui/Botao';
 import Input from '@/components/ui/Input';
+import { CHAVE_SESSAO_NAVEGADOR } from '@/lib/browser-session';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
@@ -45,6 +46,10 @@ export default function PaginaLogin() {
             setTimeout(() => loginRef.current?.focus(), 50);
             return;
         }
+
+        // Marca que esta sessão pertence à janela atual do navegador.
+        // O sessionStorage é apagado quando a aba/janela é fechada.
+        sessionStorage.setItem(CHAVE_SESSAO_NAVEGADOR, 'ativa');
 
         // Busca a sessão para saber o papel e se é primeiro login
         const sessaoRes = await fetch('/api/auth/session');

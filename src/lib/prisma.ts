@@ -1,17 +1,22 @@
 import { PrismaClient } from '@/generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg';
 
-// Evita múltiplas instâncias do Prisma durante o hot reload do Next.js
+// Evita múltiplas instâncias do Prisma durante hot reload
 const globalForPrisma = globalThis as unknown as {
     prisma: PrismaClient | undefined;
 };
 
 function criarPrismaClient() {
-    // Adapter de conexão com PostgreSQL — obrigatório no Prisma 7
-    const adapter = new PrismaPg({
-        connectionString: process.env.DATABASE_URL!,
+    const pool = new Pool({
+        connectionString: process.env.DATABASE_URL,
     });
-    return new PrismaClient({ adapter } as any);
+
+    const adapter = new PrismaPg(pool);
+
+    return new PrismaClient({
+        adapter,
+    });
 }
 
 export const prisma = globalForPrisma.prisma ?? criarPrismaClient();

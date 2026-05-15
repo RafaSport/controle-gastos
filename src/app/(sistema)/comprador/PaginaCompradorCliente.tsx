@@ -31,71 +31,104 @@ export default function PaginaCompradorCliente({
 
     useEffect(() => {
         async function buscarDados() {
-            const [resUsuario, resCompras, resMeses] = await Promise.all([
-                fetch(`/api/usuarios?id=${usuarioId}`),
-                fetch(`/api/compras/usuario?id=${usuarioId}`),
-                fetch(`/api/meses?id=${usuarioId}`),
-            ]);
-            const dadosUsuario = await resUsuario.json();
-            const dadosCompras = await resCompras.json();
-            const dadosMeses = await resMeses.json();
+            try {
+                const [resUsuario, resCompras, resMeses] = await Promise.all([
+                    fetch(`/api/usuarios?id=${usuarioId}`),
+                    fetch(`/api/compras/usuario?id=${usuarioId}`),
+                    fetch(`/api/meses?id=${usuarioId}`),
+                ]);
 
-            setUsuario(dadosUsuario?.id ? dadosUsuario : null);
-            setCompras(Array.isArray(dadosCompras) ? dadosCompras : []);
-            setMesesFechados(Array.isArray(dadosMeses) ? dadosMeses : []);
-            setCarregando(false);
+                const dadosUsuario = await resUsuario.json();
+                const dadosCompras = await resCompras.json();
+                const dadosMeses = await resMeses.json();
+
+                setUsuario(dadosUsuario?.id ? dadosUsuario : null);
+
+                setCompras(Array.isArray(dadosCompras) ? dadosCompras : []);
+
+                setMesesFechados(Array.isArray(dadosMeses) ? dadosMeses : []);
+            } catch (erro) {
+                console.error('Erro ao buscar dados:', erro);
+            } finally {
+                setCarregando(false);
+            }
         }
+
         buscarDados();
     }, [usuarioId]);
 
     useEffect(() => {
         if (!usuario?.usaUber) return;
-        async function buscarCorridas() {
-            setCarregandoUber(true);
-            const res = await fetch(
-                `/api/corridas/usuario?id=${usuarioId}&mes=${mesSelecionado}&ano=${anoSelecionado}`
-            );
-            const data = await res.json();
-            setCorridas(Array.isArray(data) ? data : []);
-            setCarregandoUber(false);
-        }
-        buscarCorridas();
-    }, [usuario, mesSelecionado, anoSelecionado]);
 
-    // Calcula o primeiro mês em aberto (>= hoje que não foi fechado)
+        async function buscarCorridas() {
+            try {
+                setCarregandoUber(true);
+
+                const res = await fetch(
+                    `/api/corridas/usuario?id=${usuarioId}&mes=${mesSelecionado}&ano=${anoSelecionado}`
+                );
+
+                const data = await res.json();
+
+                setCorridas(Array.isArray(data) ? data : []);
+            } catch (erro) {
+                console.error('Erro ao buscar corridas:', erro);
+            } finally {
+                setCarregandoUber(false);
+            }
+        }
+
+        buscarCorridas();
+    }, [usuario, usuarioId, mesSelecionado, anoSelecionado]);
+
     const { mesEmAberto, anoEmAberto } = useMemo(() => {
         const mesReal = hoje.getMonth() + 1;
         const anoReal = hoje.getFullYear();
 
-        // Verifica se o mês real está fechado e avança até encontrar um aberto
         let m = mesReal;
         let a = anoReal;
+
         while (mesesFechados.some((mf) => mf.mes === m && mf.ano === a)) {
             m = m === 12 ? 1 : m + 1;
-            a = m === 1 ? a + 1 : a;
+
+            if (m === 1) {
+                a++;
+            }
         }
-        return { mesEmAberto: m, anoEmAberto: a };
+
+        return {
+            mesEmAberto: m,
+            anoEmAberto: a,
+        };
     }, [mesesFechados]);
 
-    // Inicializa o seletor no mês em aberto quando os dados carregam
     useEffect(() => {
         if (!carregando) {
             setMesSelecionado(mesEmAberto);
             setAnoSelecionado(anoEmAberto);
         }
-    }, [carregando]);
+    }, [carregando, mesEmAberto, anoEmAberto]);
 
     const mesesDisponiveis = useMemo(() => {
         const lista = [];
+
         for (let i = -3; i <= 9; i++) {
             const data = new Date(hoje.getFullYear(), hoje.getMonth() + i, 1);
+
             const m = data.getMonth() + 1;
             const a = data.getFullYear();
+
             const fechado = mesesFechados.some(
                 (mf) => mf.mes === m && mf.ano === a
             );
-            lista.push({ mes: m, ano: a, fechado });
+
+            lista.push({
+                mes: m,
+                ano: a,
+                fechado,
+            });
         }
+
         return lista;
     }, [mesesFechados]);
 
@@ -109,6 +142,7 @@ export default function PaginaCompradorCliente({
                 const ini = c.anoInicio * 12 + c.mesInicio;
                 const fim = c.anoFinal * 12 + c.mesFinal;
                 const sel = anoSelecionado * 12 + mesSelecionado;
+
                 return ini <= sel && fim >= sel;
             })
             .reduce((acc, c) => acc + c.valorParcela, 0);
@@ -130,7 +164,7 @@ export default function PaginaCompradorCliente({
 
     if (carregando) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
+            <div className="min-h-screen flex items-center justify-center bg-zinc-950">
                 <span className="text-zinc-500 text-sm">Carregando...</span>
             </div>
         );
@@ -178,6 +212,7 @@ export default function PaginaCompradorCliente({
                 <div className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 flex flex-col gap-2">
                     <div className="flex items-center justify-between">
                         <Badge status={mesFechado ? 'finalizado' : 'aberto'} />
+
                         {mesFechado && (
                             <span className="text-xs text-zinc-500">
                                 Pago: R${' '}
@@ -191,29 +226,36 @@ export default function PaginaCompradorCliente({
                     <div className="border-t border-zinc-800 pt-2 flex flex-col gap-1">
                         <div className="flex justify-between text-xs text-zinc-500">
                             <span>Compras</span>
+
                             <span>
                                 R$ {totalCompras.toFixed(2).replace('.', ',')}
                             </span>
                         </div>
+
                         {totalUber > 0 && (
                             <div className="flex justify-between text-xs text-zinc-500">
                                 <span>Uber</span>
+
                                 <span>
                                     R$ {totalUber.toFixed(2).replace('.', ',')}
                                 </span>
                             </div>
                         )}
+
                         {totalDivida > 0 && (
                             <div className="flex justify-between text-xs text-red-400">
                                 <span>Dívida anterior</span>
+
                                 <span>
                                     R${' '}
                                     {totalDivida.toFixed(2).replace('.', ',')}
                                 </span>
                             </div>
                         )}
+
                         <div className="flex justify-between text-sm font-bold text-zinc-100 border-t border-zinc-800 pt-1 mt-1">
                             <span>Total do mês</span>
+
                             <span>
                                 R$ {totalMes.toFixed(2).replace('.', ',')}
                             </span>

@@ -1,0 +1,3 @@
+DATABASE_URL="postgresql://neondb_owner:npg_OGJa8cuZYfW4@ep-green-frog-ac9utcab.sa-east-1.aws.neon.tech/neondb?sslmode=require"
+AUTH_SECRET="cG9ydGFsLWNvbnRyb2xlLWdhc3Rvc0AxMjM0NTY3ODk="
+AUTH_URL="https://controle-gastos-rust.vercel.app/login"
