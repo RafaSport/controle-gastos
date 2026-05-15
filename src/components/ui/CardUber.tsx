@@ -28,6 +28,13 @@ const MESES = [
     'Dez',
 ];
 
+function formatarDataCorrida(data: string) {
+    const dataCorrida = new Date(data);
+
+    // Usa UTC para exibir exatamente o dia salvo, sem deslocar pelo fuso do navegador.
+    return dataCorrida.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+}
+
 export default function CardUber({
     usuarioId,
     mes,
@@ -119,9 +126,9 @@ export default function CardUber({
                                             }
                                         >
                                             <td className="px-3 py-2 text-zinc-300">
-                                                {new Date(
+                                                {formatarDataCorrida(
                                                     corrida.data
-                                                ).toLocaleDateString('pt-BR')}
+                                                )}
                                             </td>
                                             <td className="px-3 py-2 text-right text-zinc-100 font-medium">
                                                 R${' '}
