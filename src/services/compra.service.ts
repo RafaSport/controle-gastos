@@ -1,5 +1,6 @@
 import { calcularMesFinal } from '@/lib/utils';
 import * as compraRepo from '@/repositories/compra.repository';
+import { Cartao } from '@prisma/client';
 
 // Retorna as compras de um usuário
 export async function listarCompras(usuarioId: string) {
@@ -25,20 +26,54 @@ export async function cadastrarCompra(dados: {
         dados.qtdParcelas
     );
 
-    return await compraRepo.criarCompra({ ...dados, mesFinal, anoFinal });
+    // Monta o objeto no formato que o Prisma espera (CompraCreateInput)
+    return await compraRepo.criarCompra({
+        cartao: dados.cartao as Cartao, // ← Cast para o enum do Prisma
+        descricao: dados.descricao,
+        mesCompra: dados.mesCompra,
+        anoCompra: dados.anoCompra,
+        mesInicio: dados.mesInicio,
+        anoInicio: dados.anoInicio,
+        mesFinal,
+        anoFinal,
+        qtdParcelas: dados.qtdParcelas,
+        valorParcela: dados.valorParcela,
+        usuario: {
+            connect: { id: dados.usuarioId },
+        },
+    });
 }
 
 // Edita uma compra e recalcula o mês final se necessário
-export async function editarCompra(id: string, dados: any) {
+export async function editarCompra(
+    id: string,
+    dados: {
+        usuarioId?: string;
+        cartao?: string;
+        descricao?: string;
+        mesCompra?: number;
+        anoCompra?: number;
+        mesInicio?: number;
+        anoInicio?: number;
+        qtdParcelas?: number;
+        valorParcela?: number;
+    }
+) {
+    let dadosAtualizados: any = { ...dados };
+
     if (dados.mesInicio && dados.anoInicio && dados.qtdParcelas) {
         const { mesFinal, anoFinal } = calcularMesFinal(
             dados.mesInicio,
             dados.anoInicio,
             dados.qtdParcelas
         );
-        dados = { ...dados, mesFinal, anoFinal };
+        dadosAtualizados = { ...dadosAtualizados, mesFinal, anoFinal };
     }
-    return await compraRepo.atualizarCompra(id, dados);
+
+    // Remove usuarioId se existir (não pode atualizar relação diretamente)
+    delete dadosAtualizados.usuarioId;
+
+    return await compraRepo.atualizarCompra(id, dadosAtualizados);
 }
 
 // Remove uma compra
