@@ -146,7 +146,7 @@ export function useResumoMensal({
     // ----------------------------------------
 
     // Mês em aberto (primeiro mês não fechado a partir de hoje)
-    const { mesEmAberto, anoEmAberto } = useMemo(() => {
+    const { mes: mesEmAberto, ano: anoEmAberto } = useMemo(() => {
         const mesAtual = hoje.getMonth() + 1;
         const anoAtual = hoje.getFullYear();
         return encontrarPrimeiroMesEmAberto(mesesFechados, mesAtual, anoAtual);

@@ -1,3 +1,9 @@
+// src/app/(sistema)/comprador/PaginaCompradorCliente.tsx
+// Dashboard do comprador — versão refatorada (M4.7)
+//
+// ANTES: ~270 linhas com busca, cálculos e renderização misturados
+// DEPOIS: ~100 linhas — apenas renderização. Toda lógica em useResumoMensal hook
+
 'use client';
 
 import Header from '@/components/layout/Header';
@@ -6,164 +12,52 @@ import CardDividaAnterior from '@/components/ui/CardDividaAnterior';
 import CardUber from '@/components/ui/CardUber';
 import SeletorMes from '@/components/ui/SeletorMes';
 import TabelaCompras from '@/components/ui/TabelaCompras';
-import { Compra, Corrida, MesFechado, Usuario } from '@/types';
-import { useEffect, useMemo, useState } from 'react';
+import { useResumoMensal } from '@/hooks/useResumoMensal';
+
+// ============================================
+// INTERFACE — Props da página
+// ============================================
 
 interface Props {
     usuarioId: string;
     nomeUsuario: string;
 }
 
+// ============================================
+// COMPONENTE PRINCIPAL — Apenas renderização
+// ============================================
+
 export default function PaginaCompradorCliente({
     usuarioId,
     nomeUsuario,
 }: Props) {
-    const hoje = new Date();
+    // ----------------------------------------
+    // HOOK — Toda a lógica de busca e cálculos
+    // ----------------------------------------
+    const {
+        usuario,
+        compras,
+        corridas,
+        mesesFechados,
+        carregando,
+        carregandoUber,
+        mesSelecionado,
+        anoSelecionado,
+        setMesSelecionado,
+        setAnoSelecionado,
+        mesEmAberto,
+        anoEmAberto,
+        mesesDisponiveis,
+        mesFechado,
+        totalCompras,
+        totalUber,
+        dividaAnterior,
+        totalConsolidado,
+    } = useResumoMensal({ usuarioId, usaUber: usuario?.usaUber });
 
-    const [usuario, setUsuario] = useState<Usuario | null>(null);
-    const [compras, setCompras] = useState<Compra[]>([]);
-    const [corridas, setCorridas] = useState<Corrida[]>([]);
-    const [mesesFechados, setMesesFechados] = useState<MesFechado[]>([]);
-    const [mesSelecionado, setMesSelecionado] = useState(hoje.getMonth() + 1);
-    const [anoSelecionado, setAnoSelecionado] = useState(hoje.getFullYear());
-    const [carregando, setCarregando] = useState(true);
-    const [carregandoUber, setCarregandoUber] = useState(false);
-
-    useEffect(() => {
-        async function buscarDados() {
-            try {
-                const [resUsuario, resCompras, resMeses] = await Promise.all([
-                    fetch(`/api/usuarios?id=${usuarioId}`),
-                    fetch(`/api/compras/usuario?id=${usuarioId}`),
-                    fetch(`/api/meses?id=${usuarioId}`),
-                ]);
-
-                const dadosUsuario = await resUsuario.json();
-                const dadosCompras = await resCompras.json();
-                const dadosMeses = await resMeses.json();
-
-                setUsuario(dadosUsuario?.id ? dadosUsuario : null);
-
-                setCompras(Array.isArray(dadosCompras) ? dadosCompras : []);
-
-                setMesesFechados(Array.isArray(dadosMeses) ? dadosMeses : []);
-            } catch (erro) {
-                console.error('Erro ao buscar dados:', erro);
-            } finally {
-                setCarregando(false);
-            }
-        }
-
-        buscarDados();
-    }, [usuarioId]);
-
-    useEffect(() => {
-        if (!usuario?.usaUber) return;
-
-        async function buscarCorridas() {
-            try {
-                setCarregandoUber(true);
-
-                const res = await fetch(
-                    `/api/corridas/usuario?id=${usuarioId}&mes=${mesSelecionado}&ano=${anoSelecionado}`
-                );
-
-                const data = await res.json();
-
-                setCorridas(Array.isArray(data) ? data : []);
-            } catch (erro) {
-                console.error('Erro ao buscar corridas:', erro);
-            } finally {
-                setCarregandoUber(false);
-            }
-        }
-
-        buscarCorridas();
-    }, [usuario, usuarioId, mesSelecionado, anoSelecionado]);
-
-    const { mesEmAberto, anoEmAberto } = useMemo(() => {
-        const mesReal = hoje.getMonth() + 1;
-        const anoReal = hoje.getFullYear();
-
-        let m = mesReal;
-        let a = anoReal;
-
-        while (mesesFechados.some((mf) => mf.mes === m && mf.ano === a)) {
-            m = m === 12 ? 1 : m + 1;
-
-            if (m === 1) {
-                a++;
-            }
-        }
-
-        return {
-            mesEmAberto: m,
-            anoEmAberto: a,
-        };
-    }, [mesesFechados]);
-
-    useEffect(() => {
-        if (!carregando) {
-            setMesSelecionado(mesEmAberto);
-            setAnoSelecionado(anoEmAberto);
-        }
-    }, [carregando, mesEmAberto, anoEmAberto]);
-
-    const mesesDisponiveis = useMemo(() => {
-        const lista = [];
-
-        // Mantem o primeiro mes em aberto sempre na terceira posicao do seletor.
-        // As duas primeiras posicoes servem como historico visual de meses anteriores.
-        for (let i = -2; i <= 10; i++) {
-            const data = new Date(anoEmAberto, mesEmAberto - 1 + i, 1);
-
-            const m = data.getMonth() + 1;
-            const a = data.getFullYear();
-
-            const fechado = mesesFechados.some(
-                (mf) => mf.mes === m && mf.ano === a
-            );
-
-            lista.push({
-                mes: m,
-                ano: a,
-                fechado,
-            });
-        }
-
-        return lista;
-    }, [anoEmAberto, mesEmAberto, mesesFechados]);
-
-    const mesFechado = mesesFechados.find(
-        (mf) => mf.mes === mesSelecionado && mf.ano === anoSelecionado
-    );
-
-    const totalCompras = useMemo(() => {
-        return compras
-            .filter((c) => {
-                const ini = c.anoInicio * 12 + c.mesInicio;
-                const fim = c.anoFinal * 12 + c.mesFinal;
-                const sel = anoSelecionado * 12 + mesSelecionado;
-
-                return ini <= sel && fim >= sel;
-            })
-            .reduce((acc, c) => acc + c.valorParcela, 0);
-    }, [compras, mesSelecionado, anoSelecionado]);
-
-    const totalUber = corridas.reduce((acc, c) => acc + c.valor, 0);
-
-    const ultimoMesFechado = mesesFechados
-        .filter(
-            (mf) => mf.ano * 12 + mf.mes < anoSelecionado * 12 + mesSelecionado
-        )
-        .sort((a, b) => b.ano * 12 + b.mes - (a.ano * 12 + a.mes))[0];
-
-    const totalDivida = ultimoMesFechado
-        ? Math.max(0, ultimoMesFechado.totalDoMes - ultimoMesFechado.totalPago)
-        : 0;
-
-    const totalMes = totalCompras + totalUber + totalDivida;
-
+    // ----------------------------------------
+    // LOADING STATE
+    // ----------------------------------------
     if (carregando) {
         return (
             <div className="flex-1 flex items-center justify-center bg-zinc-950">
@@ -172,11 +66,15 @@ export default function PaginaCompradorCliente({
         );
     }
 
+    // ----------------------------------------
+    // RENDERIZAÇÃO
+    // ----------------------------------------
     return (
         <div className="flex-1 bg-zinc-950">
             <Header nomeUsuario={nomeUsuario} />
 
             <main className="max-w-4xl mx-auto px-4 py-6 flex flex-col gap-4">
+                {/* Seletor de mês/ano */}
                 <SeletorMes
                     mesSelecionado={mesSelecionado}
                     anoSelecionado={anoSelecionado}
@@ -189,6 +87,7 @@ export default function PaginaCompradorCliente({
                     }}
                 />
 
+                {/* Card de corridas Uber (só se o usuário usa Uber) */}
                 {usuario?.usaUber && (
                     <CardUber
                         usuarioId={usuarioId}
@@ -199,72 +98,101 @@ export default function PaginaCompradorCliente({
                     />
                 )}
 
+                {/* Card de dívida anterior */}
                 <CardDividaAnterior
                     mesesFechados={mesesFechados}
                     mesSelecionado={mesSelecionado}
                     anoSelecionado={anoSelecionado}
                 />
 
+                {/* Tabela de compras do mês */}
                 <TabelaCompras
                     compras={compras}
                     mesSelecionado={mesSelecionado}
                     anoSelecionado={anoSelecionado}
                 />
 
-                <div className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 flex flex-col gap-2">
-                    <div className="flex items-center justify-between">
-                        <Badge status={mesFechado ? 'finalizado' : 'aberto'} />
-
-                        {mesFechado && (
-                            <span className="text-xs text-zinc-500">
-                                Pago: R${' '}
-                                {mesFechado.totalPago
-                                    .toFixed(2)
-                                    .replace('.', ',')}
-                            </span>
-                        )}
-                    </div>
-
-                    <div className="border-t border-zinc-800 pt-2 flex flex-col gap-1">
-                        <div className="flex justify-between text-xs text-zinc-500">
-                            <span>Compras</span>
-
-                            <span>
-                                R$ {totalCompras.toFixed(2).replace('.', ',')}
-                            </span>
-                        </div>
-
-                        {totalUber > 0 && (
-                            <div className="flex justify-between text-xs text-zinc-500">
-                                <span>Uber</span>
-
-                                <span>
-                                    R$ {totalUber.toFixed(2).replace('.', ',')}
-                                </span>
-                            </div>
-                        )}
-
-                        {totalDivida > 0 && (
-                            <div className="flex justify-between text-xs text-red-400">
-                                <span>Dívida anterior</span>
-
-                                <span>
-                                    R${' '}
-                                    {totalDivida.toFixed(2).replace('.', ',')}
-                                </span>
-                            </div>
-                        )}
-
-                        <div className="flex justify-between text-sm font-bold text-zinc-100 border-t border-zinc-800 pt-1 mt-1">
-                            <span>Total do mês</span>
-
-                            <span>
-                                R$ {totalMes.toFixed(2).replace('.', ',')}
-                            </span>
-                        </div>
-                    </div>
-                </div>
+                {/* Resumo financeiro do mês */}
+                <ResumoFinanceiro
+                    mesFechado={mesFechado}
+                    totalCompras={totalCompras}
+                    totalUber={totalUber}
+                    dividaAnterior={dividaAnterior}
+                    totalConsolidado={totalConsolidado}
+                />
             </main>
+        </div>
+    );
+}
+
+// ============================================
+// SUBCOMPONENTE — Resumo financeiro do mês
+// Extraído para deixar a página ainda mais limpa
+// ============================================
+
+interface ResumoFinanceiroProps {
+    mesFechado: { totalPago: number } | undefined;
+    totalCompras: number;
+    totalUber: number;
+    dividaAnterior: number;
+    totalConsolidado: number;
+}
+
+function ResumoFinanceiro({
+    mesFechado,
+    totalCompras,
+    totalUber,
+    dividaAnterior,
+    totalConsolidado,
+}: ResumoFinanceiroProps) {
+    return (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 flex flex-col gap-2">
+            {/* Cabeçalho com status e pagamento */}
+            <div className="flex items-center justify-between">
+                <Badge status={mesFechado ? 'finalizado' : 'aberto'} />
+
+                {mesFechado && (
+                    <span className="text-xs text-zinc-500">
+                        Pago: R${' '}
+                        {mesFechado.totalPago.toFixed(2).replace('.', ',')}
+                    </span>
+                )}
+            </div>
+
+            {/* Detalhamento dos valores */}
+            <div className="border-t border-zinc-800 pt-2 flex flex-col gap-1">
+                {/* Total de compras */}
+                <div className="flex justify-between text-xs text-zinc-500">
+                    <span>Compras</span>
+                    <span>R$ {totalCompras.toFixed(2).replace('.', ',')}</span>
+                </div>
+
+                {/* Total de Uber (só mostra se > 0) */}
+                {totalUber > 0 && (
+                    <div className="flex justify-between text-xs text-zinc-500">
+                        <span>Uber</span>
+                        <span>R$ {totalUber.toFixed(2).replace('.', ',')}</span>
+                    </div>
+                )}
+
+                {/* Dívida anterior (só mostra se > 0) */}
+                {dividaAnterior > 0 && (
+                    <div className="flex justify-between text-xs text-red-400">
+                        <span>Dívida anterior</span>
+                        <span>
+                            R$ {dividaAnterior.toFixed(2).replace('.', ',')}
+                        </span>
+                    </div>
+                )}
+
+                {/* Total consolidado */}
+                <div className="flex justify-between text-sm font-bold text-zinc-100 border-t border-zinc-800 pt-1 mt-1">
+                    <span>Total do mês</span>
+                    <span>
+                        R$ {totalConsolidado.toFixed(2).replace('.', ',')}
+                    </span>
+                </div>
+            </div>
         </div>
     );
 }
