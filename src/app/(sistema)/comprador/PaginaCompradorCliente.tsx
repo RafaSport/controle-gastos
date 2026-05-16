@@ -53,7 +53,7 @@ export default function PaginaCompradorCliente({
         totalUber,
         dividaAnterior,
         totalConsolidado,
-    } = useResumoMensal({ usuarioId, usaUber: usuario?.usaUber });
+    } = useResumoMensal({ usuarioId });
 
     // ----------------------------------------
     // LOADING STATE

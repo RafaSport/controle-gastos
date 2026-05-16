@@ -1,3 +1,7 @@
+// Dashboard do comprador (visão admin) — versão refatorada
+// ANTES: tina busca, cálculos, ações e modais misturados
+// DEPOIS: lógica financeira no hook, ações admin na página
+
 'use client';
 
 import Header from '@/components/layout/Header';
@@ -11,181 +15,108 @@ import ModalEditarCompra from '@/components/ui/ModalEditarCompra';
 import ModalPagamento from '@/components/ui/ModalPagamento';
 import SeletorMes from '@/components/ui/SeletorMes';
 import TabelaCompras from '@/components/ui/TabelaCompras';
-import { Compra, Corrida, MesFechado, Usuario } from '@/types';
+import { useResumoMensal } from '@/hooks/useResumoMensal';
+import { Compra } from '@/types';
 import { ArrowLeft, PlusCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useState } from 'react';
 
-interface Props { usuarioId: string }
+// ============================================
+// INTERFACE — Props da página
+// ============================================
+
+interface Props {
+    usuarioId: string;
+}
+
+// ============================================
+// COMPONENTE PRINCIPAL
+// ============================================
 
 export default function PaginaCompradorAdminCliente({ usuarioId }: Props) {
-    const router = useRouter()
-    const hoje   = new Date()
+    const router = useRouter();
 
-    const [usuario, setUsuario]               = useState<Usuario | null>(null)
-    const [compras, setCompras]               = useState<Compra[]>([])
-    const [corridas, setCorridas]             = useState<Corrida[]>([])
-    const [mesesFechados, setMesesFechados]   = useState<MesFechado[]>([])
-    const [mesSelecionado, setMesSelecionado] = useState(hoje.getMonth() + 1)
-    const [anoSelecionado, setAnoSelecionado] = useState(hoje.getFullYear())
-    const [carregando, setCarregando]         = useState(true)
-    const [carregandoUber, setCarregandoUber] = useState(false)
+    // ----------------------------------------
+    // HOOK — Lógica financeira compartilhada
+    // ----------------------------------------
+    const {
+        usuario,
+        compras,
+        corridas,
+        mesesFechados,
+        carregando,
+        carregandoUber,
+        mesSelecionado,
+        anoSelecionado,
+        setMesSelecionado,
+        setAnoSelecionado,
+        mesEmAberto,
+        anoEmAberto,
+        mesesDisponiveis,
+        mesFechado,
+        totalCompras,
+        totalUber,
+        dividaAnterior,
+        totalConsolidado,
+        recarregar,
+    } = useResumoMensal({ usuarioId });
 
-    const [modalCompra, setModalCompra]       = useState(false)
-    const [modalCorrida, setModalCorrida]     = useState(false)
-    const [modalEditar, setModalEditar]       = useState(false)
-    const [modalPagamento, setModalPagamento] = useState(false)
-    const [compraEditando, setCompraEditando] = useState<Compra | null>(null)
+    // ----------------------------------------
+    // ESTADOS LOCAIS — Apenas UI e modais (específico do admin)
+    // ----------------------------------------
+    const [modalCompra, setModalCompra] = useState(false);
+    const [modalCorrida, setModalCorrida] = useState(false);
+    const [modalEditar, setModalEditar] = useState(false);
+    const [modalPagamento, setModalPagamento] = useState(false);
+    const [compraEditando, setCompraEditando] = useState<Compra | null>(null);
 
-    async function buscarDados() {
-        const [resUsuario, resCompras, resMeses] = await Promise.all([
-            fetch(`/api/usuarios?id=${usuarioId}`),
-            fetch(`/api/compras/usuario?id=${usuarioId}`),
-            fetch(`/api/meses?id=${usuarioId}`),
-        ])
-        const dadosUsuario = await resUsuario.json()
-        const dadosCompras = await resCompras.json()
-        const dadosMeses   = await resMeses.json()
+    // ----------------------------------------
+    // AÇÕES ADMIN — Específicas desta página
+    // ----------------------------------------
 
-        setUsuario(dadosUsuario?.id ? dadosUsuario : null)
-        setCompras(Array.isArray(dadosCompras) ? dadosCompras : [])
-        setMesesFechados(Array.isArray(dadosMeses) ? dadosMeses : [])
-        setCarregando(false)
-    }
-
-    useEffect(() => { buscarDados() }, [usuarioId])
-
-    useEffect(() => {
-        if (!usuario?.usaUber) return
-        async function buscarCorridas() {
-            setCarregandoUber(true)
-            const res  = await fetch(`/api/corridas/usuario?id=${usuarioId}&mes=${mesSelecionado}&ano=${anoSelecionado}`)
-            const data = await res.json()
-            setCorridas(Array.isArray(data) ? data : [])
-            setCarregandoUber(false)
-        }
-        buscarCorridas()
-    }, [usuario, mesSelecionado, anoSelecionado])
-
-    // Calcula o primeiro mês em aberto (>= hoje que não foi fechado)
-    const { mesEmAberto, anoEmAberto } = useMemo(() => {
-        const mesReal = hoje.getMonth() + 1
-        const anoReal = hoje.getFullYear()
-
-        let m = mesReal
-        let a = anoReal
-        while (mesesFechados.some((mf) => mf.mes === m && mf.ano === a)) {
-            m = m === 12 ? 1 : m + 1
-            a = m === 1 ? a + 1 : a
-        }
-        return { mesEmAberto: m, anoEmAberto: a }
-    }, [mesesFechados])
-
-    // Inicializa o seletor no mês em aberto quando os dados carregam
-    useEffect(() => {
-        if (!carregando) {
-            setMesSelecionado(mesEmAberto)
-            setAnoSelecionado(anoEmAberto)
-        }
-    }, [carregando])
-
+    /** Exclui uma compra após confirmação */
     async function handleExcluirCompra(id: string) {
-        if (!confirm('Excluir esta compra?')) return
-        await fetch(`/api/compras/${id}`, { method: 'DELETE' })
-        buscarDados()
+        if (!confirm('Excluir esta compra?')) return;
+
+        await fetch(`/api/compras/${id}`, { method: 'DELETE' });
+        recarregar(); // Recarrega dados do hook
     }
 
-    const mesesDisponiveis = useMemo(() => {
-        const lista = []
+    /** Abre modal de edição com a compra selecionada */
+    function handleEditarCompra(compra: Compra) {
+        setCompraEditando(compra);
+        setModalEditar(true);
+    }
 
-        // Mantem o primeiro mes em aberto sempre na terceira posicao do seletor.
-        // As duas primeiras posicoes servem como historico visual de meses anteriores.
-        for (let i = -2; i <= 10; i++) {
-            const data    = new Date(anoEmAberto, mesEmAberto - 1 + i, 1)
-            const m       = data.getMonth() + 1
-            const a       = data.getFullYear()
-            const fechado = mesesFechados.some((mf) => mf.mes === m && mf.ano === a)
-            lista.push({ mes: m, ano: a, fechado })
-        }
-        return lista
-    }, [anoEmAberto, mesEmAberto, mesesFechados])
-
-    const mesFechado = mesesFechados.find(
-        (mf) => mf.mes === mesSelecionado && mf.ano === anoSelecionado
-    )
-
-    const comprasDoMes = compras.filter((c) => {
-        const ini = c.anoInicio * 12 + c.mesInicio
-        const fim = c.anoFinal  * 12 + c.mesFinal
-        const sel = anoSelecionado * 12 + mesSelecionado
-        return ini <= sel && fim >= sel
-    })
-
-    const totalCompras  = comprasDoMes.reduce((acc, c) => acc + c.valorParcela, 0)
-    const totalUber     = corridas.reduce((acc, c) => acc + c.valor, 0)
-
-    const ultimoMesFechado = mesesFechados
-        .filter((mf) => mf.ano * 12 + mf.mes < anoSelecionado * 12 + mesSelecionado)
-        .sort((a, b) => b.ano * 12 + b.mes - (a.ano * 12 + a.mes))[0]
-
-    const totalDivida = ultimoMesFechado
-        ? Math.max(0, ultimoMesFechado.totalDoMes - ultimoMesFechado.totalPago)
-        : 0
-
-    const totalMes = totalCompras + totalUber + totalDivida
-
+    // ----------------------------------------
+    // LOADING STATE
+    // ----------------------------------------
     if (carregando) {
         return (
             <div className="flex-1 flex items-center justify-center">
                 <span className="text-zinc-500 text-sm">Carregando...</span>
             </div>
-        )
+        );
     }
 
+    // ----------------------------------------
+    // RENDERIZAÇÃO
+    // ----------------------------------------
     return (
         <div className="flex-1 bg-zinc-950">
             <Header nomeUsuario="Admin" />
 
             <main className="max-w-4xl mx-auto px-4 py-6 flex flex-col gap-4">
+                {/* Cabeçalho com nome do comprador e ações */}
+                <CabecalhoAdmin
+                    usuario={usuario}
+                    usaUber={usuario?.usaUber ?? false}
+                    onVoltar={() => router.push('/admin')}
+                    onNovaCorrida={() => setModalCorrida(true)}
+                    onNovaCompra={() => setModalCompra(true)}
+                />
 
-                <div className="flex items-start justify-between">
-                    <div className="flex flex-col items-start">
-                        <Botao
-                            cor="cinza"
-                            tamanho="sm"
-                            icone={<ArrowLeft className="w-4 h-4" />}
-                            onClick={() => router.push('/admin')}
-                        >
-                            Voltar
-                        </Botao>
-                        <h1 className="mt-2 text-lg font-semibold text-zinc-100">
-                            {usuario?.nome} {usuario?.sobrenome}
-                        </h1>
-                        <p className="text-xs text-zinc-500">{usuario?.login}</p>
-                    </div>
-
-                    <div className="flex gap-2">
-                        {usuario?.usaUber && (
-                            <Botao
-                                cor="amarelo"
-                                tamanho="sm"
-                                icone={<PlusCircle className="w-4 h-4" />}
-                                onClick={() => setModalCorrida(true)}
-                            >
-                                Corrida
-                            </Botao>
-                        )}
-                        <Botao
-                            cor="verde"
-                            tamanho="sm"
-                            icone={<PlusCircle className="w-4 h-4" />}
-                            onClick={() => setModalCompra(true)}
-                        >
-                            Compra
-                        </Botao>
-                    </div>
-                </div>
-
+                {/* Seletor de mês/ano */}
                 <SeletorMes
                     mesSelecionado={mesSelecionado}
                     anoSelecionado={anoSelecionado}
@@ -193,11 +124,12 @@ export default function PaginaCompradorAdminCliente({ usuarioId }: Props) {
                     anoAtual={anoEmAberto}
                     mesesDisponiveis={mesesDisponiveis}
                     onChange={(mes, ano) => {
-                        setMesSelecionado(mes)
-                        setAnoSelecionado(ano)
+                        setMesSelecionado(mes);
+                        setAnoSelecionado(ano);
                     }}
                 />
 
+                {/* Card de corridas Uber */}
                 {usuario?.usaUber && (
                     <CardUber
                         usuarioId={usuarioId}
@@ -208,12 +140,14 @@ export default function PaginaCompradorAdminCliente({ usuarioId }: Props) {
                     />
                 )}
 
+                {/* Card de dívida anterior */}
                 <CardDividaAnterior
                     mesesFechados={mesesFechados}
                     mesSelecionado={mesSelecionado}
                     anoSelecionado={anoSelecionado}
                 />
 
+                {/* Tabela de compras com ações de admin */}
                 <TabelaCompras
                     compras={compras}
                     mesSelecionado={mesSelecionado}
@@ -223,7 +157,7 @@ export default function PaginaCompradorAdminCliente({ usuarioId }: Props) {
                             <Botao
                                 cor="amarelo"
                                 tamanho="sm"
-                                onClick={() => { setCompraEditando(compra); setModalEditar(true) }}
+                                onClick={() => handleEditarCompra(compra)}
                             >
                                 Editar
                             </Botao>
@@ -238,52 +172,23 @@ export default function PaginaCompradorAdminCliente({ usuarioId }: Props) {
                     )}
                 />
 
-                <div className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 flex flex-col gap-2">
-                    <div className="flex items-center justify-between">
-                        <Badge status={mesFechado ? 'finalizado' : 'aberto'} />
-                        {!mesFechado && (
-                            <Botao cor="azul" tamanho="sm" onClick={() => setModalPagamento(true)}>
-                                Efetuar pagamento
-                            </Botao>
-                        )}
-                        {mesFechado && (
-                            <span className="text-xs text-zinc-500">
-                                Pago: R$ {mesFechado.totalPago.toFixed(2).replace('.', ',')}
-                            </span>
-                        )}
-                    </div>
-
-                    <div className="border-t border-zinc-800 pt-2 flex flex-col gap-1">
-                        <div className="flex justify-between text-xs text-zinc-500">
-                            <span>Compras</span>
-                            <span>R$ {totalCompras.toFixed(2).replace('.', ',')}</span>
-                        </div>
-                        {totalUber > 0 && (
-                            <div className="flex justify-between text-xs text-zinc-500">
-                                <span>Uber</span>
-                                <span>R$ {totalUber.toFixed(2).replace('.', ',')}</span>
-                            </div>
-                        )}
-                        {totalDivida > 0 && (
-                            <div className="flex justify-between text-xs text-red-400">
-                                <span>Dívida anterior</span>
-                                <span>R$ {totalDivida.toFixed(2).replace('.', ',')}</span>
-                            </div>
-                        )}
-                        <div className="flex justify-between text-sm font-bold text-zinc-100 border-t border-zinc-800 pt-1 mt-1">
-                            <span>Total do mês</span>
-                            <span>R$ {totalMes.toFixed(2).replace('.', ',')}</span>
-                        </div>
-                    </div>
-                </div>
-
+                {/* Resumo financeiro com ação de pagamento */}
+                <ResumoFinanceiroAdmin
+                    mesFechado={mesFechado}
+                    totalCompras={totalCompras}
+                    totalUber={totalUber}
+                    dividaAnterior={dividaAnterior}
+                    totalConsolidado={totalConsolidado}
+                    onEfetuarPagamento={() => setModalPagamento(true)}
+                />
             </main>
 
+            {/* Modais */}
             <ModalCadastroCompra
                 aberto={modalCompra}
                 usuarioId={usuarioId}
                 onFechar={() => setModalCompra(false)}
-                onSalvar={buscarDados}
+                onSalvar={recarregar}
             />
 
             <ModalCadastroCorrida
@@ -293,30 +198,169 @@ export default function PaginaCompradorAdminCliente({ usuarioId }: Props) {
                 anoEmAberto={anoEmAberto}
                 onFechar={() => setModalCorrida(false)}
                 onSalvar={() => {
-                    if (!usuario?.usaUber) return
-                    fetch(`/api/corridas/usuario?id=${usuarioId}&mes=${mesEmAberto}&ano=${anoEmAberto}`)
-                        .then(r => r.json())
-                        .then(data => setCorridas(Array.isArray(data) ? data : []))
+                    if (!usuario?.usaUber) return;
+                    fetch(
+                        `/api/corridas/usuario?id=${usuarioId}&mes=${mesEmAberto}&ano=${anoEmAberto}`
+                    )
+                        .then((r) => r.json())
+                        .then((data) => recarregar());
                 }}
             />
 
             <ModalEditarCompra
                 aberto={modalEditar}
                 compra={compraEditando}
-                onFechar={() => { setModalEditar(false); setCompraEditando(null) }}
-                onSalvar={buscarDados}
+                onFechar={() => {
+                    setModalEditar(false);
+                    setCompraEditando(null);
+                }}
+                onSalvar={recarregar}
             />
 
             <ModalPagamento
                 aberto={modalPagamento}
-                totalDoMes={totalMes}
+                totalDoMes={totalConsolidado}
                 usuarioId={usuarioId}
                 mes={mesSelecionado}
                 ano={anoSelecionado}
                 onFechar={() => setModalPagamento(false)}
-                onSalvar={buscarDados}
+                onSalvar={recarregar}
             />
-
         </div>
-    )
+    );
+}
+
+// ============================================
+// SUBCOMPONENTE — Cabeçalho com dados do comprador e ações
+// ============================================
+
+interface CabecalhoAdminProps {
+    usuario: { nome?: string; sobrenome?: string; login?: string } | null;
+    usaUber: boolean;
+    onVoltar: () => void;
+    onNovaCorrida: () => void;
+    onNovaCompra: () => void;
+}
+
+function CabecalhoAdmin({
+    usuario,
+    usaUber,
+    onVoltar,
+    onNovaCorrida,
+    onNovaCompra,
+}: CabecalhoAdminProps) {
+    return (
+        <div className="flex items-start justify-between">
+            <div className="flex flex-col items-start">
+                <Botao
+                    cor="cinza"
+                    tamanho="sm"
+                    icone={<ArrowLeft className="w-4 h-4" />}
+                    onClick={onVoltar}
+                >
+                    Voltar
+                </Botao>
+                <h1 className="mt-2 text-lg font-semibold text-zinc-100">
+                    {usuario?.nome} {usuario?.sobrenome}
+                </h1>
+                <p className="text-xs text-zinc-500">{usuario?.login}</p>
+            </div>
+
+            <div className="flex gap-2">
+                {usaUber && (
+                    <Botao
+                        cor="amarelo"
+                        tamanho="sm"
+                        icone={<PlusCircle className="w-4 h-4" />}
+                        onClick={onNovaCorrida}
+                    >
+                        Corrida
+                    </Botao>
+                )}
+                <Botao
+                    cor="verde"
+                    tamanho="sm"
+                    icone={<PlusCircle className="w-4 h-4" />}
+                    onClick={onNovaCompra}
+                >
+                    Compra
+                </Botao>
+            </div>
+        </div>
+    );
+}
+
+// ============================================
+// SUBCOMPONENTE — Resumo financeiro com ação de pagamento (admin)
+// ============================================
+
+interface ResumoFinanceiroAdminProps {
+    mesFechado: { totalPago: number } | undefined;
+    totalCompras: number;
+    totalUber: number;
+    dividaAnterior: number;
+    totalConsolidado: number;
+    onEfetuarPagamento: () => void;
+}
+
+function ResumoFinanceiroAdmin({
+    mesFechado,
+    totalCompras,
+    totalUber,
+    dividaAnterior,
+    totalConsolidado,
+    onEfetuarPagamento,
+}: ResumoFinanceiroAdminProps) {
+    return (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 flex flex-col gap-2">
+            {/* Cabeçalho com status e botão de pagamento */}
+            <div className="flex items-center justify-between">
+                <Badge status={mesFechado ? 'finalizado' : 'aberto'} />
+
+                {!mesFechado && (
+                    <Botao cor="azul" tamanho="sm" onClick={onEfetuarPagamento}>
+                        Efetuar pagamento
+                    </Botao>
+                )}
+
+                {mesFechado && (
+                    <span className="text-xs text-zinc-500">
+                        Pago: R${' '}
+                        {mesFechado.totalPago.toFixed(2).replace('.', ',')}
+                    </span>
+                )}
+            </div>
+
+            {/* Detalhamento dos valores */}
+            <div className="border-t border-zinc-800 pt-2 flex flex-col gap-1">
+                <div className="flex justify-between text-xs text-zinc-500">
+                    <span>Compras</span>
+                    <span>R$ {totalCompras.toFixed(2).replace('.', ',')}</span>
+                </div>
+
+                {totalUber > 0 && (
+                    <div className="flex justify-between text-xs text-zinc-500">
+                        <span>Uber</span>
+                        <span>R$ {totalUber.toFixed(2).replace('.', ',')}</span>
+                    </div>
+                )}
+
+                {dividaAnterior > 0 && (
+                    <div className="flex justify-between text-xs text-red-400">
+                        <span>Dívida anterior</span>
+                        <span>
+                            R$ {dividaAnterior.toFixed(2).replace('.', ',')}
+                        </span>
+                    </div>
+                )}
+
+                <div className="flex justify-between text-sm font-bold text-zinc-100 border-t border-zinc-800 pt-1 mt-1">
+                    <span>Total do mês</span>
+                    <span>
+                        R$ {totalConsolidado.toFixed(2).replace('.', ',')}
+                    </span>
+                </div>
+            </div>
+        </div>
+    );
 }

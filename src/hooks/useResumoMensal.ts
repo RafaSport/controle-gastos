@@ -21,8 +21,6 @@ import { useEffect, useMemo, useState } from 'react';
 interface UseResumoMensalProps {
     /** ID do usuário para buscar dados */
     usuarioId: string;
-    /** Se o usuário usa Uber (evita buscar corridas se não usar) */
-    usaUber?: boolean;
 }
 
 interface UseResumoMensalReturn {
@@ -64,7 +62,6 @@ interface UseResumoMensalReturn {
 
 export function useResumoMensal({
     usuarioId,
-    usaUber = false,
 }: UseResumoMensalProps): UseResumoMensalReturn {
     // ----------------------------------------
     // ESTADOS — Dados brutos do servidor
@@ -119,8 +116,7 @@ export function useResumoMensal({
     // FUNÇÃO: Buscar corridas Uber (só se usaUber = true)
     // ----------------------------------------
     async function buscarCorridas() {
-        if (!usaUber) return;
-
+        if (!usuario?.usaUber) return; // ← USA O USUÁRIO QUE JÁ FOI BUSCADO
         setCarregandoUber(true);
 
         try {
@@ -139,7 +135,7 @@ export function useResumoMensal({
     // Busca corridas quando muda mês/ano ou quando descobre que usaUber
     useEffect(() => {
         buscarCorridas();
-    }, [usuarioId, mesSelecionado, anoSelecionado, usaUber]);
+    }, [usuarioId, mesSelecionado, anoSelecionado]);
 
     // ----------------------------------------
     // DADOS DERIVADOS — Calculados com useMemo (performance)
