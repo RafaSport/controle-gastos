@@ -1,11 +1,21 @@
+// Modal de cadastro de compra — versão refatorada
+// Toda lógica extraída para:
+//   - useCadastroCompra (hook de estado e validação)
+//   - SeletorCartao (subcomponente de UI)
+//   - PreviewParcelas (subcomponente de UI)
+
 'use client';
 
-import { CORES_CARTAO, LISTA_CARTOES, NOMES_CARTAO } from '@/config/cartoes';
-import { Cartao } from '@/types';
-import { useEffect, useState } from 'react';
+import { MESES, useCadastroCompra } from '@/hooks/useCadastroCompra';
 import Botao from './Botao';
 import Input from './Input';
 import Modal from './Modal';
+import PreviewParcelas from './compra/PreviewParcelas';
+import SeletorCartao from './compra/SeletorCartao';
+
+// ============================================
+// INTERFACE — Props do modal
+// ============================================
 
 interface Props {
     aberto: boolean;
@@ -14,26 +24,9 @@ interface Props {
     onSalvar: () => void;
 }
 
-const CARTOES = LISTA_CARTOES;
-
-const MESES = [
-    'Jan',
-    'Fev',
-    'Mar',
-    'Abr',
-    'Mai',
-    'Jun',
-    'Jul',
-    'Ago',
-    'Set',
-    'Out',
-    'Nov',
-    'Dez',
-];
-
-function emMeses(mes: number, ano: number) {
-    return ano * 12 + mes;
-}
+// ============================================
+// COMPONENTE PRINCIPAL — Apenas renderização
+// ============================================
 
 export default function ModalCadastroCompra({
     aberto,
@@ -41,135 +34,46 @@ export default function ModalCadastroCompra({
     onFechar,
     onSalvar,
 }: Props) {
-    const hoje = new Date();
-    const mesAtual = hoje.getMonth() + 1;
-    const anoAtual = hoje.getFullYear();
+    // ----------------------------------------
+    // HOOK — Toda a lógica de estado, validação e submit
+    // ----------------------------------------
+    const {
+        // Estados do formulário
+        cartao,
+        setCartao,
+        descricao,
+        setDescricao,
+        mesCompra,
+        setMesCompra,
+        anoCompra,
+        setAnoCompra,
+        mesInicio,
+        setMesInicio,
+        anoInicio,
+        setAnoInicio,
+        qtdParcelas,
+        setQtdParcelas,
+        valorParcela,
+        setValorParcela,
 
-    const [cartao, setCartao] = useState<Cartao>('NUBANK');
-    const [descricao, setDescricao] = useState('');
-    const [mesCompra, setMesCompra] = useState(mesAtual);
-    const [anoCompra, setAnoCompra] = useState(anoAtual);
-    const [mesInicio, setMesInicio] = useState(mesAtual);
-    const [anoInicio, setAnoInicio] = useState(anoAtual);
-    const [qtdParcelas, setQtdParcelas] = useState(1);
-    const [valorParcela, setValorParcela] = useState('');
-    const [erro, setErro] = useState('');
-    const [alertaInicio, setAlertaInicio] = useState('');
-    const [alertaCompra, setAlertaCompra] = useState('');
-    const [carregando, setCarregando] = useState(false);
+        // UI
+        erro,
+        alertaInicio,
+        alertaCompra,
+        carregando,
 
-    // Reseta o formulário sempre que o modal abre
-    useEffect(() => {
-        if (aberto) {
-            const agora = new Date();
-            const m = agora.getMonth() + 1;
-            const a = agora.getFullYear();
-            setCartao('NUBANK');
-            setDescricao('');
-            setMesCompra(m);
-            setAnoCompra(a);
-            setMesInicio(m);
-            setAnoInicio(a);
-            setQtdParcelas(1);
-            setValorParcela('');
-            setErro('');
-            setAlertaInicio('');
-            setAlertaCompra('');
-        }
-    }, [aberto]);
+        // Derivados
+        mesAtual,
+        anoAtual,
+        mesFinalPreview,
 
-    // Valida o mês da compra — não pode ser futuro, alerta se 3+ meses atrás
-    useEffect(() => {
-        const compraEmMeses = emMeses(mesCompra, anoCompra);
-        const atualEmMeses = emMeses(mesAtual, anoAtual);
-        const diferencaMeses = atualEmMeses - compraEmMeses;
+        // Ação
+        handleSalvar,
+    } = useCadastroCompra({ usuarioId, aberto, onSalvar, onFechar });
 
-        if (compraEmMeses > atualEmMeses) {
-            // Corrige automaticamente para o mês atual se tentar colocar futuro
-            setMesCompra(mesAtual);
-            setAnoCompra(anoAtual);
-            setAlertaCompra('');
-            return;
-        }
-
-        if (diferencaMeses >= 3) {
-            setAlertaCompra(
-                `Esta compra foi há ${diferencaMeses} meses (${MESES[mesCompra - 1]}/${anoCompra}). Isso está certo?`
-            );
-        } else {
-            setAlertaCompra('');
-        }
-    }, [mesCompra, anoCompra]);
-
-    // Valida o mês de início — nunca antes da compra, alerta se 3+ meses depois
-    useEffect(() => {
-        const compraEmMeses = emMeses(mesCompra, anoCompra);
-        const inicioEmMeses = emMeses(mesInicio, anoInicio);
-        const diferencaMeses = inicioEmMeses - compraEmMeses;
-
-        if (inicioEmMeses < compraEmMeses) {
-            setMesInicio(mesCompra);
-            setAnoInicio(anoCompra);
-            setAlertaInicio('');
-            return;
-        }
-
-        if (diferencaMeses >= 3) {
-            setAlertaInicio(
-                `O pagamento só começa em ${MESES[mesInicio - 1]}/${anoInicio}, que é ${diferencaMeses} meses depois da compra. Isso está certo?`
-            );
-        } else {
-            setAlertaInicio('');
-        }
-    }, [mesCompra, anoCompra, mesInicio, anoInicio]);
-
-    function calcularMesFinal() {
-        const total = mesInicio + qtdParcelas - 1;
-        const mesFinal = ((total - 1) % 12) + 1;
-        const anoFinal = anoInicio + Math.floor((total - 1) / 12);
-        return `${MESES[mesFinal - 1]}/${anoFinal}`;
-    }
-
-    async function handleSalvar() {
-        setErro('');
-
-        if (!descricao.trim()) {
-            setErro('Descrição obrigatória.');
-            return;
-        }
-        if (!valorParcela || parseFloat(valorParcela.replace(',', '.')) <= 0) {
-            setErro('Valor inválido.');
-            return;
-        }
-
-        setCarregando(true);
-
-        const res = await fetch('/api/compras', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                usuarioId,
-                cartao,
-                descricao: descricao.trim(),
-                mesCompra,
-                anoCompra,
-                mesInicio,
-                anoInicio,
-                qtdParcelas,
-                valorParcela: parseFloat(valorParcela.replace(',', '.')),
-            }),
-        });
-
-        setCarregando(false);
-        if (!res.ok) {
-            setErro('Erro ao cadastrar compra.');
-            return;
-        }
-
-        onSalvar();
-        onFechar();
-    }
-
+    // ----------------------------------------
+    // RENDERIZAÇÃO
+    // ----------------------------------------
     return (
         <Modal
             aberto={aberto}
@@ -178,33 +82,10 @@ export default function ModalCadastroCompra({
             tamanho="lg"
         >
             <div className="flex flex-col gap-4">
-                {/* Seletor de cartão */}
-                <div className="flex flex-col gap-1">
-                    <label className="text-sm font-medium text-zinc-300">
-                        Cartão
-                    </label>
-                    <div className="flex gap-2">
-                        {CARTOES.map((c) => (
-                            <button
-                                key={c}
-                                type="button"
-                                onClick={() => setCartao(c)}
-                                style={
-                                    cartao === c
-                                        ? { backgroundColor: CORES_CARTAO[c] }
-                                        : {}
-                                }
-                                className={`
-                                    flex-1 py-2 rounded-lg text-xs font-bold transition-all
-                                    ${cartao === c ? 'text-white' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}
-                                `}
-                            >
-                                {NOMES_CARTAO[c]}
-                            </button>
-                        ))}
-                    </div>
-                </div>
+                {/* Seletor de cartão — subcomponente reutilizável */}
+                <SeletorCartao cartao={cartao} onChange={setCartao} />
 
+                {/* Descrição da compra */}
                 <Input
                     label="Descrição"
                     placeholder="Ex: Notebook Dell"
@@ -212,7 +93,7 @@ export default function ModalCadastroCompra({
                     onChange={(e) => setDescricao(e.target.value)}
                 />
 
-                {/* Mês e ano da compra — não pode ser futuro */}
+                {/* Mês e ano da compra */}
                 <div className="grid grid-cols-2 gap-3">
                     <div className="flex flex-col gap-1">
                         <label className="text-sm font-medium text-zinc-300">
@@ -226,7 +107,6 @@ export default function ModalCadastroCompra({
                             className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
                             {MESES.map((m, i) => {
-                                // Desabilita meses futuros no mesmo ano
                                 const desabilitado =
                                     anoCompra === anoAtual && i + 1 > mesAtual;
                                 return (
@@ -245,13 +125,12 @@ export default function ModalCadastroCompra({
                         label="Ano da compra"
                         type="number"
                         value={anoCompra}
-                        // Não permite ano futuro
                         max={anoAtual}
                         onChange={(e) => setAnoCompra(Number(e.target.value))}
                     />
                 </div>
 
-                {/* Alerta de compra muito antiga */}
+                {/* Alerta: compra muito antiga */}
                 {alertaCompra && (
                     <div className="flex items-start gap-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg px-3 py-2">
                         <span className="text-yellow-400 shrink-0 mt-0.5">
@@ -263,7 +142,7 @@ export default function ModalCadastroCompra({
                     </div>
                 )}
 
-                {/* Mês e ano de início — nunca antes da compra */}
+                {/* Mês e ano de início */}
                 <div className="grid grid-cols-2 gap-3">
                     <div className="flex flex-col gap-1">
                         <label className="text-sm font-medium text-zinc-300">
@@ -300,7 +179,7 @@ export default function ModalCadastroCompra({
                     />
                 </div>
 
-                {/* Alerta de início muito distante da compra */}
+                {/* Alerta: início muito distante da compra */}
                 {alertaInicio && (
                     <div className="flex items-start gap-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg px-3 py-2">
                         <span className="text-yellow-400 shrink-0 mt-0.5">
@@ -328,16 +207,10 @@ export default function ModalCadastroCompra({
                     />
                 </div>
 
-                {/* Mês final calculado automaticamente */}
-                <div className="bg-zinc-800 rounded-lg px-3 py-2">
-                    <p className="text-xs text-zinc-400">
-                        Término previsto:
-                        <span className="text-blue-400 font-medium ml-1">
-                            {calcularMesFinal()}
-                        </span>
-                    </p>
-                </div>
+                {/* Preview do mês final — subcomponente reutilizável */}
+                <PreviewParcelas mesFinal={mesFinalPreview} />
 
+                {/* Erro de validação/submit */}
                 {erro && (
                     <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
                         <span className="text-red-400 shrink-0">⚠</span>
@@ -345,6 +218,7 @@ export default function ModalCadastroCompra({
                     </div>
                 )}
 
+                {/* Botões de ação */}
                 <div className="flex gap-2 justify-end">
                     <Botao cor="cinza" onClick={onFechar}>
                         Cancelar
