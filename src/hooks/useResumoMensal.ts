@@ -54,6 +54,7 @@ interface UseResumoMensalReturn {
 
     // Ações
     recarregar: () => Promise<void>;
+    recarregarCorridas: () => Promise<void>;
 }
 
 // ============================================
@@ -130,6 +131,14 @@ export function useResumoMensal({
         } finally {
             setCarregandoUber(false);
         }
+    }
+
+    // ----------------------------------------
+    // FUNÇÃO PÚBLICA: Recarregar apenas corridas
+    // Usada após cadastrar/excluir uma corrida
+    // ----------------------------------------
+    async function recarregarCorridas() {
+        await buscarCorridas();
     }
 
     // Busca corridas quando muda mês/ano ou quando descobre que usaUber
@@ -234,5 +243,6 @@ export function useResumoMensal({
 
         // Ações
         recarregar: buscarDados,
+        recarregarCorridas,
     };
 }

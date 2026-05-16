@@ -59,6 +59,7 @@ export default function PaginaCompradorAdminCliente({ usuarioId }: Props) {
         dividaAnterior,
         totalConsolidado,
         recarregar,
+        recarregarCorridas,
     } = useResumoMensal({ usuarioId });
 
     // ----------------------------------------
@@ -197,14 +198,7 @@ export default function PaginaCompradorAdminCliente({ usuarioId }: Props) {
                 mesEmAberto={mesEmAberto}
                 anoEmAberto={anoEmAberto}
                 onFechar={() => setModalCorrida(false)}
-                onSalvar={() => {
-                    if (!usuario?.usaUber) return;
-                    fetch(
-                        `/api/corridas/usuario?id=${usuarioId}&mes=${mesEmAberto}&ano=${anoEmAberto}`
-                    )
-                        .then((r) => r.json())
-                        .then((data) => recarregar());
-                }}
+                onSalvar={recarregarCorridas} // ← SÓ ISSO
             />
 
             <ModalEditarCompra
