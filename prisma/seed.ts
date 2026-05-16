@@ -3,9 +3,13 @@ import bcrypt from 'bcryptjs';
 import 'dotenv/config';
 import { PrismaClient } from '../src/generated/prisma/client';
 import { Cartao, Papel } from '../src/generated/prisma/enums';
+import { gerarSenhaPadrao } from '../src/lib/utils';
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter } as any);
+
+// Senha padrão para seed (pode ser sobrescrita via .env)
+const SENHA_PADRAO_SEED = process.env.SENHA_PADRAO_SEED ?? '123';
 
 async function main() {
     // ==================== ADMIN ====================
@@ -14,7 +18,7 @@ async function main() {
     });
 
     if (!adminExiste) {
-        const senha = await bcrypt.hash('admin123', 10);
+        const senha = await bcrypt.hash(`admin${SENHA_PADRAO_SEED}`, 10);
         await (prisma as any).usuario.create({
             data: {
                 nome: 'Admin',
@@ -53,7 +57,7 @@ async function main() {
         });
 
         if (!existe) {
-            const senha = await bcrypt.hash(`${login}123`, 10);
+            const senha = await bcrypt.hash(gerarSenhaPadrao(login), 10);
             const usuario = await (prisma as any).usuario.create({
                 data: {
                     nome: c.nome,
@@ -65,7 +69,7 @@ async function main() {
                     usaUber: c.usaUber,
                 },
             });
-            console.log(`✅ Comprador criado: ${login} / senha: ${login}123`);
+            console.log(`✅ Comprador criado: ${login} / senha: ${gerarSenhaPadrao(login)}`);
 
             // Compras padrão para todos exceto Pedro
             if (c.nome !== 'Pedro') {

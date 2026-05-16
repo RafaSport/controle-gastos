@@ -14,10 +14,14 @@ export function gerarLogin(nome: string, sobrenome: string): string {
     return `${nomeLimpo}.${sobrenomeLimpo}`;
 }
 
+// Sufixo padrão para senhas geradas automaticamente
+// Pode ser sobrescrito via variável de ambiente SENHA_PADRAO_SUFFIX
+const SENHA_PADRAO_SUFFIX = process.env.SENHA_PADRAO_SUFFIX ?? '123';
+
 // Gera a senha padrão a partir do login
 // Exemplo: "ana.bia" → "ana.bia123"
 export function gerarSenhaPadrao(login: string): string {
-    return `${login}123`;
+    return `${login}${SENHA_PADRAO_SUFFIX}`;
 }
 
 // Calcula o mês e ano final de uma compra parcelada
