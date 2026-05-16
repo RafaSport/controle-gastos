@@ -1,5 +1,6 @@
 'use client';
 
+import { CORES_CARTAO, LISTA_CARTOES, NOMES_CARTAO } from '@/config/cartoes';
 import { Cartao } from '@/types';
 import { useEffect, useState } from 'react';
 import Botao from './Botao';
@@ -13,19 +14,8 @@ interface Props {
     onSalvar: () => void;
 }
 
-const CARTOES: Cartao[] = ['NUBANK', 'INTER', 'HIPER', 'ITAU'];
-const NOMES_CARTAO: Record<Cartao, string> = {
-    NUBANK: 'Nubank',
-    INTER: 'Inter',
-    HIPER: 'Hiper',
-    ITAU: 'Itaú',
-};
-const CORES_CARTAO: Record<Cartao, string> = {
-    NUBANK: '#820AD1',
-    INTER: '#FF6600',
-    HIPER: '#CC0000',
-    ITAU: '#003087',
-};
+const CARTOES = LISTA_CARTOES;
+
 const MESES = [
     'Jan',
     'Fev',

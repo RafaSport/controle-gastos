@@ -6,7 +6,7 @@ export async function buscarCorridasDoMes(
     mes: number,
     ano: number
 ) {
-    return await (prisma as any).corrida.findMany({
+    return await prisma.corrida.findMany({
         where: {
             usuarioId,
             mesReferencia: mes,
@@ -24,10 +24,10 @@ export async function criarCorrida(dados: {
     anoReferencia: number;
     valor: number;
 }) {
-    return await (prisma as any).corrida.create({ data: dados });
+    return await prisma.corrida.create({ data: dados });
 }
 
 // Remove uma corrida.
 export async function deletarCorrida(id: string) {
-    return await (prisma as any).corrida.delete({ where: { id } });
+    return await prisma.corrida.delete({ where: { id } });
 }

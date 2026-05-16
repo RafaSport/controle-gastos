@@ -2,7 +2,7 @@ import { prisma } from '@/lib/prisma';
 
 // Busca todos os usuários compradores ordenados por nome
 export async function buscarTodosCompradores() {
-    return await (prisma as any).usuario.findMany({
+    return await prisma.usuario.findMany({
         where: { papel: 'COMPRADOR' },
         orderBy: { nome: 'asc' },
         include: { compras: true },
@@ -11,7 +11,7 @@ export async function buscarTodosCompradores() {
 
 // Busca um único usuário pelo ID
 export async function buscarUsuarioPorId(id: string) {
-    return await (prisma as any).usuario.findUnique({
+    return await prisma.usuario.findUnique({
         where: { id },
         include: { compras: true, mesesFechados: true },
     });
@@ -19,7 +19,7 @@ export async function buscarUsuarioPorId(id: string) {
 
 // Busca um usuário pelo login (usado na autenticação)
 export async function buscarUsuarioPorLogin(login: string) {
-    return await (prisma as any).usuario.findUnique({
+    return await prisma.usuario.findUnique({
         where: { login },
     });
 }
@@ -32,14 +32,14 @@ export async function criarUsuario(dados: {
     senha: string;
     usaUber: boolean;
 }) {
-    return await (prisma as any).usuario.create({
+    return await prisma.usuario.create({
         data: { ...dados, papel: 'COMPRADOR' },
     });
 }
 
 // Atualiza a senha e marca que o primeiro login já foi feito
 export async function atualizarSenha(id: string, novaSenha: string) {
-    return await (prisma as any).usuario.update({
+    return await prisma.usuario.update({
         where: { id },
         data: { senha: novaSenha, primeiroLogin: false },
     });
@@ -47,7 +47,7 @@ export async function atualizarSenha(id: string, novaSenha: string) {
 
 // Remove um usuário e suas compras (cascade no banco)
 export async function deletarUsuario(id: string) {
-    return await (prisma as any).usuario.delete({
+    return await prisma.usuario.delete({
         where: { id },
     });
 }
@@ -60,7 +60,7 @@ export async function atualizarComprador(
         usaUber?: boolean;
     }
 ) {
-    return await (prisma as any).usuario.update({
+    return await prisma.usuario.update({
         where: { id },
         data: dados,
     });
@@ -71,7 +71,7 @@ export async function resetarSenhaUsuario(
     id: string,
     senhaCriptografada: string
 ) {
-    return await (prisma as any).usuario.update({
+    return await prisma.usuario.update({
         where: { id },
         data: { senha: senhaCriptografada, primeiroLogin: true },
     });

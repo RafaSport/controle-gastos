@@ -6,7 +6,7 @@ export default function Footer() {
             <div className="max-w-4xl mx-auto text-center">
                 {/* Assinatura discreta do projeto exibida no rodape do sistema. */}
                 <p className="text-xs text-zinc-500">
-                    Feito com dedica&ccedil;&atilde;o por Rafael Guedes &copy;{' '}
+                    Feito com dedicação por Rafael Guedes &copy;{' '}
                     {anoAtual}
                 </p>
             </div>
