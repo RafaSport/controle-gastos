@@ -1,9 +1,11 @@
-/**  Hook que encapsula toda a lógica de estado, validação
- * e submitdo formulário de cadastro de compra.
+/**
+ * Hook que encapsula toda a lógica de estado, validação
+ * e submit do formulário de cadastro de compra.
  * Separa a "cabeça" da "tela".
  */
 
-import { AppError, extrairErroApi } from '@/lib/errors';
+import { apiPost } from '@/lib/api-client';
+import { AppError } from '@/lib/errors';
 import { calcularMesFinal } from '@/lib/utils';
 import { Cartao } from '@/types';
 import { useEffect, useState } from 'react';
@@ -230,33 +232,30 @@ export function useCadastroCompra({
         setCarregando(true);
 
         try {
-            const res = await fetch('/api/compras', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    usuarioId,
-                    cartao,
-                    descricao: descricao.trim(),
-                    mesCompra,
-                    anoCompra,
-                    mesInicio,
-                    anoInicio,
-                    qtdParcelas,
-                    valorParcela: valorNumerico,
-                }),
+            // Usa apiPost — erro HTTP já é tratado com throw Error
+            await apiPost('/api/compras', {
+                usuarioId,
+                cartao,
+                descricao: descricao.trim(),
+                mesCompra,
+                anoCompra,
+                mesInicio,
+                anoInicio,
+                qtdParcelas,
+                valorParcela: valorNumerico,
             });
-
-            if (!res.ok) {
-                const erroApi = await extrairErroApi(res);
-                setErro(erroApi.mensagemUsuario);
-                return;
-            }
 
             onSalvar(); // Notifica pai que salvou
             onFechar(); // Fecha modal
-        } catch {
-            const erroRede = AppError.rede();
-            setErro(erroRede.mensagemUsuario);
+        } catch (err: any) {
+            // apiPost já joga Error com mensagem da API
+            // Mantém compatibilidade com o sistema de erro customizado
+            if (err instanceof Error) {
+                setErro(err.message);
+            } else {
+                const erroRede = AppError.rede();
+                setErro(erroRede.mensagemUsuario);
+            }
         } finally {
             setCarregando(false);
         }
