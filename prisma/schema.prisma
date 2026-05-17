@@ -1,11 +1,12 @@
 generator client {
-  provider = "prisma-client"
+  provider   = "prisma-client-js"
   engineType = "client"
-  output   = "../src/generated/prisma"
+  output     = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 enum Papel {
@@ -28,12 +29,12 @@ model Usuario {
   senha         String
   papel         Papel    @default(COMPRADOR)
   primeiroLogin Boolean  @default(true)
-  usaUber       Boolean  @default(false) // indica se o comprador usa uber
-  criadoEm     DateTime @default(now())
+  usaUber       Boolean  @default(false)
+  criadoEm      DateTime @default(now())
 
   compras       Compra[]
   mesesFechados MesFechado[]
-  corridas      Corrida[]    // corridas de uber do comprador
+  corridas      Corrida[]
 }
 
 model Compra {
@@ -49,7 +50,7 @@ model Compra {
   mesFinal     Int
   anoFinal     Int
   valorParcela Float
-  criadoEm    DateTime @default(now())
+  criadoEm     DateTime @default(now())
 
   usuario      Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 }
@@ -59,23 +60,22 @@ model MesFechado {
   usuarioId      String
   mes            Int
   ano            Int
-  totalDoMes     Float    @default(0)  // total que deveria ser pago
-  totalPago      Float    @default(0)  // valor efetivamente pago
-  dividaAnterior Float    @default(0)  // saldo acumulado de meses anteriores
+  totalDoMes     Float    @default(0)
+  totalPago      Float    @default(0)
+  dividaAnterior Float    @default(0)
 
   usuario        Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
   @@unique([usuarioId, mes, ano])
 }
 
-// Registra cada corrida de uber individualmente
 model Corrida {
   id            String   @id @default(uuid())
   usuarioId     String
-  data          DateTime // data real em que a corrida aconteceu
-  mesReferencia Int      // mes financeiro em que a corrida sera cobrada
-  anoReferencia Int      // ano financeiro em que a corrida sera cobrada
-  valor         Float    // valor da corrida
+  data          DateTime
+  mesReferencia Int
+  anoReferencia Int
+  valor         Float
   criadoEm      DateTime @default(now())
 
   usuario       Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
