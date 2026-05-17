@@ -1,3 +1,4 @@
+import { calcularDividaAnterior, calcularTotalComprasNoMes } from '@/lib/utils';
 import * as compraRepo from '@/repositories/compra.repository';
 import * as corridaRepo from '@/repositories/corrida.repository';
 import * as mesRepo from '@/repositories/mes.repository';
@@ -12,38 +13,32 @@ export async function fecharMes(
     ano: number,
     totalPago: number
 ) {
+    // --------------------------------------------------------
+    // 1. Total de compras ativas no mês (usa helper centralizado)
+    // --------------------------------------------------------
     const compras = await compraRepo.buscarComprasPorUsuario(usuarioId);
+    const totalCompras = calcularTotalComprasNoMes(compras, mes, ano);
 
-    // Soma parcelas ativas no mês atual
-    const totalCompras = compras
-        .filter((c: any) => {
-            const ini = c.anoInicio * 12 + c.mesInicio;
-            const fim = c.anoFinal * 12 + c.mesFinal;
-            const sel = ano * 12 + mes;
-            return ini <= sel && fim >= sel;
-        })
-        .reduce((acc: number, c: any) => acc + c.valorParcela, 0);
-
-    // Soma corridas do mês
+    // --------------------------------------------------------
+    // 2. Total de corridas Uber no mês
+    // --------------------------------------------------------
     const corridas = await corridaRepo.buscarCorridasDoMes(usuarioId, mes, ano);
     const totalCorridas = corridas.reduce(
         (acc: number, c: any) => acc + c.valor,
         0
     );
 
-    // Busca o último mês fechado antes deste para pegar a dívida rolante
+    // --------------------------------------------------------
+    // 3. Dívida anterior (usa helpers centralizados)
+    // Antes: lógica inline duplicada de filtro + sort + cálculo
+    // Agora: reutiliza buscarUltimoMesFechado + calcularDividaAnterior
+    // --------------------------------------------------------
     const mesesAnteriores = await mesRepo.buscarMesesFechados(usuarioId);
-    const ultimoMes = mesesAnteriores
-        .filter((mf: any) => mf.ano * 12 + mf.mes < ano * 12 + mes)
-        .sort((a: any, b: any) => b.ano * 12 + b.mes - (a.ano * 12 + a.mes))[0];
+    const dividaAnterior = calcularDividaAnterior(mesesAnteriores, mes, ano);
 
-    // Dívida anterior é apenas a dívida do último mês fechado
-    // pois ela já estava embutida no totalDoMes daquele mês
-    const dividaAnterior = ultimoMes
-        ? Math.max(0, ultimoMes.totalDoMes - ultimoMes.totalPago)
-        : 0;
-
-    // Total do mês = compras + uber + dívida rolante do mês anterior
+    // --------------------------------------------------------
+    // 4. Total consolidado do mês
+    // --------------------------------------------------------
     const totalDoMes = totalCompras + totalCorridas + dividaAnterior;
 
     return await mesRepo.fecharMes({
