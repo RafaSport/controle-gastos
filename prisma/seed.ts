@@ -2,11 +2,23 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import bcrypt from 'bcryptjs';
 import 'dotenv/config';
 import { PrismaClient } from '../src/generated/prisma/client';
-import { Cartao, Papel } from '../src/generated/prisma/enums';
 import { gerarSenhaPadrao } from '../src/lib/utils';
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter } as any);
+
+// Enums como strings (compatível com Prisma 7)
+const Papel = {
+    ADMIN: 'ADMIN',
+    COMPRADOR: 'COMPRADOR',
+} as const;
+
+const Cartao = {
+    NUBANK: 'NUBANK',
+    INTER: 'INTER',
+    HIPER: 'HIPER',
+    ITAU: 'ITAU',
+} as const;
 
 // Senha padrão para seed (pode ser sobrescrita via .env)
 const SENHA_PADRAO_SEED = process.env.SENHA_PADRAO_SEED ?? '123';
@@ -40,7 +52,7 @@ async function main() {
         { nome: 'Carlos', sobrenome: 'Silva', usaUber: false },
         { nome: 'Marta', sobrenome: 'Lima', usaUber: false },
         { nome: 'João', sobrenome: 'Uber', usaUber: true },
-        { nome: 'Pedro', sobrenome: 'Teste', usaUber: false }, // comprador com muitas compras variadas
+        { nome: 'Pedro', sobrenome: 'Teste', usaUber: false },
     ];
 
     const hoje = new Date();
@@ -69,7 +81,9 @@ async function main() {
                     usaUber: c.usaUber,
                 },
             });
-            console.log(`✅ Comprador criado: ${login} / senha: ${gerarSenhaPadrao(login)}`);
+            console.log(
+                `✅ Comprador criado: ${login} / senha: ${gerarSenhaPadrao(login)}`
+            );
 
             // Compras padrão para todos exceto Pedro
             if (c.nome !== 'Pedro') {
@@ -79,7 +93,7 @@ async function main() {
                 console.log(`   └─ ${compras.length} compras criadas`);
             }
 
-            // Compras variadas para Pedro — para testar ordenação
+            // Compras variadas para Pedro
             if (c.nome === 'Pedro') {
                 const compras = gerarComprasVariadas(usuario.id, mes, ano);
                 for (const compra of compras)
@@ -95,26 +109,36 @@ async function main() {
                     {
                         usuarioId: usuario.id,
                         data: new Date(ano, mes - 1, 3),
+                        mesReferencia: mes,
+                        anoReferencia: ano,
                         valor: 18.5,
                     },
                     {
                         usuarioId: usuario.id,
                         data: new Date(ano, mes - 1, 7),
+                        mesReferencia: mes,
+                        anoReferencia: ano,
                         valor: 22.0,
                     },
                     {
                         usuarioId: usuario.id,
                         data: new Date(ano, mes - 1, 12),
+                        mesReferencia: mes,
+                        anoReferencia: ano,
                         valor: 15.75,
                     },
                     {
                         usuarioId: usuario.id,
                         data: new Date(ano, mes - 1, 18),
+                        mesReferencia: mes,
+                        anoReferencia: ano,
                         valor: 30.0,
                     },
                     {
                         usuarioId: usuario.id,
                         data: new Date(ano, mes - 1, 25),
+                        mesReferencia: mes,
+                        anoReferencia: ano,
                         valor: 12.9,
                     },
                 ];
@@ -175,7 +199,6 @@ function gerarComprasPadrao(usuarioId: string, mes: number, ano: number) {
 // Compras variadas para testar ordenação por cartão e por término
 function gerarComprasVariadas(usuarioId: string, mes: number, ano: number) {
     return [
-        // NUBANK — 4 compras (mais compras, fica por último)
         {
             usuarioId,
             cartao: Cartao.NUBANK,
@@ -224,8 +247,6 @@ function gerarComprasVariadas(usuarioId: string, mes: number, ano: number) {
             ...calcFim(mes, ano, 6),
             valorParcela: 150.0,
         },
-
-        // INTER — 3 compras (fica no meio)
         {
             usuarioId,
             cartao: Cartao.INTER,
@@ -262,8 +283,6 @@ function gerarComprasVariadas(usuarioId: string, mes: number, ano: number) {
             ...calcFim(mes, ano, 9),
             valorParcela: 120.0,
         },
-
-        // ITAU — 2 compras (fica no meio)
         {
             usuarioId,
             cartao: Cartao.ITAU,
@@ -288,8 +307,6 @@ function gerarComprasVariadas(usuarioId: string, mes: number, ano: number) {
             ...calcFim(mes, ano, 7),
             valorParcela: 55.0,
         },
-
-        // HIPER — 1 compra (menos compras, fica em cima)
         {
             usuarioId,
             cartao: Cartao.HIPER,
