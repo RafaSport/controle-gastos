@@ -6,7 +6,7 @@
 
 import { apiPost } from '@/lib/api-client';
 import { AppError } from '@/lib/errors';
-import { calcularMesFinal } from '@/lib/utils';
+import { calcularMesFinal, paraIndiceMes } from '@/lib/utils';
 import { Cartao } from '@/types';
 import { useEffect, useState } from 'react';
 
@@ -79,14 +79,6 @@ export const MESES = [
 ];
 
 // ============================================
-// FUNÇÃO AUXILIAR — Converte mês/ano para índice
-// ============================================
-
-function emMeses(mes: number, ano: number): number {
-    return ano * 12 + mes;
-}
-
-// ============================================
 // HOOK PRINCIPAL
 // ============================================
 
@@ -106,7 +98,7 @@ export function useCadastroCompra({
     // ----------------------------------------
     // ESTADOS DO FORMULÁRIO
     // ----------------------------------------
-    const [cartao, setCartao] = useState<Cartao>('NUBANK');
+    const [cartao, setCartao] = useState(<Cartao>'NUBANK');
     const [descricao, setDescricao] = useState('');
     const [mesCompra, setMesCompra] = useState(mesAtual);
     const [anoCompra, setAnoCompra] = useState(anoAtual);
@@ -149,8 +141,9 @@ export function useCadastroCompra({
     // Regra: não pode ser futuro. Alerta se 3+ meses atrás.
     // ----------------------------------------
     useEffect(() => {
-        const compraEmMeses = emMeses(mesCompra, anoCompra);
-        const atualEmMeses = emMeses(mesAtual, anoAtual);
+        // Usa paraIndiceMes de utils.ts (antes era emMeses local)
+        const compraEmMeses = paraIndiceMes(mesCompra, anoCompra);
+        const atualEmMeses = paraIndiceMes(mesAtual, anoAtual);
         const diferencaMeses = atualEmMeses - compraEmMeses;
 
         // Se tentou colocar no futuro, corrige para o mês atual
@@ -176,8 +169,9 @@ export function useCadastroCompra({
     // Regra: nunca antes da compra. Alerta se 3+ meses depois.
     // ----------------------------------------
     useEffect(() => {
-        const compraEmMeses = emMeses(mesCompra, anoCompra);
-        const inicioEmMeses = emMeses(mesInicio, anoInicio);
+        // Usa paraIndiceMes de utils.ts (antes era emMeses local)
+        const compraEmMeses = paraIndiceMes(mesCompra, anoCompra);
+        const inicioEmMeses = paraIndiceMes(mesInicio, anoInicio);
         const diferencaMeses = inicioEmMeses - compraEmMeses;
 
         // Se início é antes da compra, corrige para igualar
