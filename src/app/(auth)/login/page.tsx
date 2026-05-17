@@ -6,6 +6,14 @@ import { CHAVE_SESSAO_NAVEGADOR } from '@/lib/browser-session';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
+import Feedback from '@/components/ui/Feedback';
+
+type TipoFeedback = 'sucesso' | 'erro';
+
+interface FeedbackState {
+    tipo: TipoFeedback;
+    mensagem: string;
+}
 
 export default function PaginaLogin() {
     const router = useRouter();
@@ -13,15 +21,18 @@ export default function PaginaLogin() {
 
     const [login, setLogin] = useState('');
     const [senha, setSenha] = useState('');
-    const [erro, setErro] = useState('');
+    const [feedback, setFeedback] = useState<FeedbackState | null>(null);
     const [carregando, setCarregando] = useState(false);
 
     async function handleLogin() {
-        setErro('');
+        setFeedback(null);
 
         // Validação antes de bater na API
         if (!login.trim() || !senha.trim()) {
-            setErro('Preencha o login e a senha para continuar.');
+            setFeedback({
+                tipo: 'erro',
+                mensagem: 'Preencha o login e a senha para continuar.',
+            });
             loginRef.current?.focus();
             return;
         }
@@ -40,9 +51,11 @@ export default function PaginaLogin() {
         if (!resultado || resultado.error) {
             setLogin('');
             setSenha('');
-            setErro(
-                'Login ou senha incorretos. Verifique seus dados e tente novamente.'
-            );
+            setFeedback({
+                tipo: 'erro',
+                mensagem:
+                    'Login ou senha incorretos. Verifique seus dados e tente novamente.',
+            });
             setTimeout(() => loginRef.current?.focus(), 50);
             return;
         }
@@ -51,20 +64,28 @@ export default function PaginaLogin() {
         // O sessionStorage é apagado quando a aba/janela é fechada.
         sessionStorage.setItem(CHAVE_SESSAO_NAVEGADOR, 'ativa');
 
-        // Busca a sessão para saber o papel e se é primeiro login
+        // Se chegou aqui, login foi um sucesso, exibe feedback e então redireciona
+        setFeedback({
+            tipo: 'sucesso',
+            mensagem: 'Login realizado com sucesso! Redirecionando...',
+        });
+    }
+
+    // Lógica de redirecionamento que será chamada após o feedback de sucesso
+    const handleRedirecionamentoPosLogin = async () => {
+        setFeedback(null); // Limpa o feedback antes de redirecionar
+
         const sessaoRes = await fetch('/api/auth/session');
         const sessao = await sessaoRes.json();
         const usuario = sessao?.user;
 
-        // Redireciona para troca de senha se for o primeiro acesso
         if (usuario?.primeiroLogin) {
             router.push('/trocar-senha');
             return;
         }
 
-        // Redireciona conforme o papel do usuário
         router.push(usuario?.papel === 'ADMIN' ? '/admin' : '/comprador');
-    }
+    };
 
     return (
         <div className="w-full max-w-sm">
@@ -80,50 +101,55 @@ export default function PaginaLogin() {
 
             {/* Card do formulário */}
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 flex flex-col gap-4">
-                <Input
-                    ref={loginRef}
-                    label="Login"
-                    placeholder="seu.login"
-                    value={login}
-                    onChange={(e) => setLogin(e.target.value)}
-                    autoComplete="username"
-                    // Enter no campo login pula para o campo senha
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                            e.preventDefault();
-                            document.getElementById('campo-senha')?.focus();
+                {feedback ? (
+                    <Feedback
+                        tipo={feedback.tipo}
+                        mensagem={feedback.mensagem}
+                        onConcluir={feedback.tipo === 'sucesso'
+                            ? handleRedirecionamentoPosLogin
+                            : () => setFeedback(null)
                         }
-                    }}
-                />
+                    />
+                ) : (
+                    <>
+                        <Input
+                            ref={loginRef}
+                            label="Login"
+                            placeholder="seu.login"
+                            value={login}
+                            onChange={(e) => setLogin(e.target.value)}
+                            autoComplete="username"
+                            // Enter no campo login pula para o campo senha
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    document.getElementById('campo-senha')?.focus();
+                                }
+                            }}
+                        />
 
-                <Input
-                    id="campo-senha"
-                    label="Senha"
-                    type="password"
-                    placeholder="••••••"
-                    value={senha}
-                    onChange={(e) => setSenha(e.target.value)}
-                    autoComplete="current-password"
-                    // Enter no campo senha dispara o login
-                    onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-                />
+                        <Input
+                            id="campo-senha"
+                            label="Senha"
+                            type="password"
+                            placeholder="••••••"
+                            value={senha}
+                            onChange={(e) => setSenha(e.target.value)}
+                            autoComplete="current-password"
+                            // Enter no campo senha dispara o login
+                            onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                        />
 
-                {/* Mensagem de erro com caixa destacada */}
-                {erro && (
-                    <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
-                        <span className="text-red-400 mt-0.5 shrink-0">⚠</span>
-                        <p className="text-xs text-red-400">{erro}</p>
-                    </div>
+                        <Botao
+                            cor="azul"
+                            larguraTotal
+                            carregando={carregando}
+                            onClick={handleLogin}
+                        >
+                            Entrar
+                        </Botao>
+                    </>
                 )}
-
-                <Botao
-                    cor="azul"
-                    larguraTotal
-                    carregando={carregando}
-                    onClick={handleLogin}
-                >
-                    Entrar
-                </Botao>
             </div>
         </div>
     );
