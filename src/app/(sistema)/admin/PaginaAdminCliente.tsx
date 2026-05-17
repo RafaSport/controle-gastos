@@ -4,7 +4,9 @@ import TabelaBase, { Coluna } from '@/components/base/TabelaBase';
 import Header from '@/components/layout/Header';
 import Botao from '@/components/ui/Botao';
 import ModalCadastroComprador from '@/components/ui/ModalCadastroComprador';
+import ModalConfirmacao from '@/components/ui/ModalConfirmacao';
 import ModalEditarComprador from '@/components/ui/ModalEditarComprador';
+import { apiDelete, apiGet } from '@/lib/api-client';
 import { Trash2 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
@@ -32,6 +34,12 @@ export default function PaginaAdminCliente() {
     const [compradorEditando, setCompradorEditando] =
         useState<Comprador | null>(null);
 
+    // Estados do modal de confirmação para exclusão de comprador
+    const [modalExcluir, setModalExcluir] = useState(false);
+    const [compradorExcluindo, setCompradorExcluindo] =
+        useState<Comprador | null>(null);
+    const [excluindo, setExcluindo] = useState(false);
+
     useEffect(() => {
         if (status === 'unauthenticated') {
             router.push('/login');
@@ -41,11 +49,15 @@ export default function PaginaAdminCliente() {
     async function buscarCompradores() {
         setCarregando(true);
 
-        const res = await fetch('/api/usuarios');
-        const data = await res.json();
-
-        setCompradores(Array.isArray(data) ? data : []);
-        setCarregando(false);
+        try {
+            const data = await apiGet<Comprador[]>('/api/usuarios');
+            setCompradores(data);
+        } catch (erro) {
+            console.error('Erro ao buscar compradores:', erro);
+            setCompradores([]);
+        } finally {
+            setCarregando(false);
+        }
     }
 
     useEffect(() => {
@@ -66,16 +78,28 @@ export default function PaginaAdminCliente() {
         return null;
     }
 
-    async function handleExcluir(e: React.MouseEvent, id: string) {
-        e.stopPropagation();
+    /** Abre modal de confirmação para excluir comprador */
+    function handleExcluir(comprador: Comprador) {
+        setCompradorExcluindo(comprador);
+        setModalExcluir(true);
+    }
 
-        if (!confirm('Excluir este comprador e todas as suas compras?')) return;
+    /** Executa exclusão após confirmação no modal */
+    async function confirmarExcluir() {
+        if (!compradorExcluindo) return;
 
-        await fetch(`/api/usuarios/${id}`, {
-            method: 'DELETE',
-        });
+        setExcluindo(true);
 
-        buscarCompradores();
+        try {
+            await apiDelete(`/api/usuarios/${compradorExcluindo.id}`);
+            buscarCompradores();
+        } catch (erro) {
+            console.error('Erro ao excluir comprador:', erro);
+        } finally {
+            setExcluindo(false);
+            setModalExcluir(false);
+            setCompradorExcluindo(null);
+        }
     }
 
     function handleEditar(e: React.MouseEvent, comprador: Comprador) {
@@ -92,7 +116,6 @@ export default function PaginaAdminCliente() {
                     <p className="font-medium text-zinc-100">
                         {c.nome} {c.sobrenome}
                     </p>
-
                     <p className="text-xs text-zinc-500">{c.login}</p>
                 </div>
             ),
@@ -173,7 +196,10 @@ export default function PaginaAdminCliente() {
                                     cor="vermelho"
                                     tamanho="sm"
                                     icone={<Trash2 size={14} />}
-                                    onClick={(e) => handleExcluir(e, c.id)}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleExcluir(c);
+                                    }}
                                 />
                             </>
                         )}
@@ -195,6 +221,26 @@ export default function PaginaAdminCliente() {
                     setCompradorEditando(null);
                 }}
                 onSalvar={buscarCompradores}
+            />
+
+            {/* Modal de confirmação para exclusão de comprador */}
+            <ModalConfirmacao
+                aberto={modalExcluir}
+                titulo="Excluir Comprador"
+                mensagem={
+                    compradorExcluindo
+                        ? `Deseja excluir "${compradorExcluindo.nome} ${compradorExcluindo.sobrenome}" (${compradorExcluindo.login})? Todas as compras, corridas e fechamentos serão removidos permanentemente.`
+                        : 'Deseja excluir este comprador?'
+                }
+                textoConfirmar="Excluir"
+                textoCancelar="Cancelar"
+                corConfirmar="vermelho"
+                carregando={excluindo}
+                onConfirmar={confirmarExcluir}
+                onCancelar={() => {
+                    setModalExcluir(false);
+                    setCompradorExcluindo(null);
+                }}
             />
         </div>
     );
