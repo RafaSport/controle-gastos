@@ -1,6 +1,6 @@
+import { Cartao } from '@/generated/prisma/client';
 import { calcularMesFinal } from '@/lib/utils';
 import * as compraRepo from '@/repositories/compra.repository';
-import { Cartao } from '@prisma/client';
 
 // Retorna as compras de um usuário
 export async function listarCompras(usuarioId: string) {

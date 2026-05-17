@@ -1,8 +1,10 @@
-import { Compra, Prisma } from '@prisma/client';
+import { Compra, Prisma } from '@/generated/prisma/client';
 import { prisma } from '@/lib/prisma';
 
 // Busca todas as compras de um usuário
-export async function buscarComprasPorUsuario(usuarioId: string): Promise<Compra[]> {
+export async function buscarComprasPorUsuario(
+    usuarioId: string
+): Promise<Compra[]> {
     return await prisma.compra.findMany({
         where: { usuarioId },
         orderBy: { criadoEm: 'asc' },
@@ -10,7 +12,9 @@ export async function buscarComprasPorUsuario(usuarioId: string): Promise<Compra
 }
 
 // Cria uma nova compra com mês final já calculado
-export async function criarCompra(dados: Prisma.CompraCreateInput): Promise<Compra> {
+export async function criarCompra(
+    dados: Prisma.CompraCreateInput
+): Promise<Compra> {
     return await prisma.compra.create({ data: dados });
 }
 
