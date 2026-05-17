@@ -1,6 +1,3 @@
-// src/app/not-found.tsx
-// Página 404 personalizada — exibida quando a rota não existe
-
 'use client';
 
 import Botao from '@/components/ui/Botao';

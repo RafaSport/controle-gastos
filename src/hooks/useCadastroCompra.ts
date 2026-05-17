@@ -1,8 +1,9 @@
-/**  Hook que encapsula toda a lógica de estado, validação 
- * e submitdo formulário de cadastro de compra. 
+/**  Hook que encapsula toda a lógica de estado, validação
+ * e submitdo formulário de cadastro de compra.
  * Separa a "cabeça" da "tela".
  */
 
+import { AppError, extrairErroApi } from '@/lib/errors';
 import { calcularMesFinal } from '@/lib/utils';
 import { Cartao } from '@/types';
 import { useEffect, useState } from 'react';
@@ -246,14 +247,16 @@ export function useCadastroCompra({
             });
 
             if (!res.ok) {
-                setErro('Erro ao cadastrar compra.');
+                const erroApi = await extrairErroApi(res);
+                setErro(erroApi.mensagemUsuario);
                 return;
             }
 
             onSalvar(); // Notifica pai que salvou
             onFechar(); // Fecha modal
         } catch {
-            setErro('Erro de conexão ao salvar.');
+            const erroRede = AppError.rede();
+            setErro(erroRede.mensagemUsuario);
         } finally {
             setCarregando(false);
         }
