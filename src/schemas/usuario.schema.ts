@@ -5,10 +5,23 @@ import { z } from 'zod';
 // ============================================
 
 export const schemaCadastroUsuario = z.object({
-    nome: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres').max(50, 'Nome muito longo'),
-    sobrenome: z.string().min(2, 'Sobrenome deve ter pelo menos 2 caracteres').max(50, 'Sobrenome muito longo'),
-    login: z.string().min(3, 'Login deve ter pelo menos 3 caracteres').max(20, 'Login muito longo'),
-    senha: z.string().min(5, 'Senha deve ter pelo menos 5 caracteres').max(100, 'Senha muito longa').optional(),
+    nome: z
+        .string()
+        .min(2, 'Nome deve ter pelo menos 2 caracteres')
+        .max(50, 'Nome muito longo'),
+    sobrenome: z
+        .string()
+        .min(2, 'Sobrenome deve ter pelo menos 2 caracteres')
+        .max(50, 'Sobrenome muito longo'),
+    login: z
+        .string()
+        .min(3, 'Login deve ter pelo menos 3 caracteres')
+        .max(20, 'Login muito longo'),
+    senha: z
+        .string()
+        .min(5, 'Senha deve ter pelo menos 5 caracteres')
+        .max(100, 'Senha muito longa')
+        .optional(),
     usaUber: z.boolean().default(false),
 });
 
@@ -18,6 +31,14 @@ export const schemaCadastroUsuario = z.object({
 
 export const schemaTrocaSenha = z.object({
     senhaAtual: z.string().min(1, 'Senha atual obrigatória'),
+    novaSenha: z.string().min(5, 'Nova senha deve ter pelo menos 5 caracteres'),
+});
+
+// ============================================
+// SCHEMA: Alteração de senha (admin reset / primeiro acesso)
+// ============================================
+
+export const schemaAlterarSenha = z.object({
     novaSenha: z.string().min(5, 'Nova senha deve ter pelo menos 5 caracteres'),
 });
 
