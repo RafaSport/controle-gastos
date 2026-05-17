@@ -50,6 +50,12 @@ export default function PaginaAdminCliente() {
         setCarregando(true);
 
         try {
+            // ANTES: fetch manual + Array.isArray check
+            // const res = await fetch('/api/usuarios');
+            // const data = await res.json();
+            // setCompradores(Array.isArray(data) ? data : []);
+
+            // DEPOIS: apiGet tipado — erro HTTP e parsing tratados automaticamente
             const data = await apiGet<Comprador[]>('/api/usuarios');
             setCompradores(data);
         } catch (erro) {
