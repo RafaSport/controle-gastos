@@ -11,6 +11,7 @@ import CardDividaAnterior from '@/components/ui/CardDividaAnterior';
 import CardUber from '@/components/ui/CardUber';
 import ModalCadastroCompra from '@/components/ui/ModalCadastroCompra';
 import ModalCadastroCorrida from '@/components/ui/ModalCadastroCorrida';
+import ModalConfirmacao from '@/components/ui/ModalConfirmacao';
 import ModalEditarCompra from '@/components/ui/ModalEditarCompra';
 import ModalPagamento from '@/components/ui/ModalPagamento';
 import SeletorMes from '@/components/ui/SeletorMes';
@@ -63,7 +64,7 @@ export default function PaginaCompradorAdminCliente({ usuarioId }: Props) {
     } = useResumoMensal({ usuarioId });
 
     // ----------------------------------------
-    // ESTADOS LOCAIS — Apenas UI e modais (específico do admin)
+    // ESTADOS LOCAIS — Modais de ação
     // ----------------------------------------
     const [modalCompra, setModalCompra] = useState(false);
     const [modalCorrida, setModalCorrida] = useState(false);
@@ -71,16 +72,39 @@ export default function PaginaCompradorAdminCliente({ usuarioId }: Props) {
     const [modalPagamento, setModalPagamento] = useState(false);
     const [compraEditando, setCompraEditando] = useState<Compra | null>(null);
 
+    // Estados do modal de confirmação (substitui confirm() nativo)
+    const [modalExcluir, setModalExcluir] = useState(false);
+    const [compraExcluindo, setCompraExcluindo] = useState<Compra | null>(null);
+    const [excluindo, setExcluindo] = useState(false);
+
     // ----------------------------------------
-    // AÇÕES ADMIN — Específicas desta página
+    // AÇÕES ADMIN
     // ----------------------------------------
 
-    /** Exclui uma compra após confirmação */
-    async function handleExcluirCompra(id: string) {
-        if (!confirm('Excluir esta compra?')) return;
+    /** Abre modal de confirmação para excluir compra */
+    function handleExcluirCompra(compra: Compra) {
+        setCompraExcluindo(compra);
+        setModalExcluir(true);
+    }
 
-        await fetch(`/api/compras/${id}`, { method: 'DELETE' });
-        recarregar(); // Recarrega dados do hook
+    /** Executa exclusão após confirmação no modal */
+    async function confirmarExcluirCompra() {
+        if (!compraExcluindo) return;
+
+        setExcluindo(true);
+
+        try {
+            await fetch(`/api/compras/${compraExcluindo.id}`, {
+                method: 'DELETE',
+            });
+            recarregar();
+        } catch (erro) {
+            console.error('Erro ao excluir compra:', erro);
+        } finally {
+            setExcluindo(false);
+            setModalExcluir(false);
+            setCompraExcluindo(null);
+        }
     }
 
     /** Abre modal de edição com a compra selecionada */
@@ -165,7 +189,7 @@ export default function PaginaCompradorAdminCliente({ usuarioId }: Props) {
                             <Botao
                                 cor="vermelho"
                                 tamanho="sm"
-                                onClick={() => handleExcluirCompra(compra.id)}
+                                onClick={() => handleExcluirCompra(compra)}
                             >
                                 Excluir
                             </Botao>
@@ -184,7 +208,7 @@ export default function PaginaCompradorAdminCliente({ usuarioId }: Props) {
                 />
             </main>
 
-            {/* Modais */}
+            {/* Modais de cadastro/edição/pagamento */}
             <ModalCadastroCompra
                 aberto={modalCompra}
                 usuarioId={usuarioId}
@@ -198,7 +222,7 @@ export default function PaginaCompradorAdminCliente({ usuarioId }: Props) {
                 mesEmAberto={mesEmAberto}
                 anoEmAberto={anoEmAberto}
                 onFechar={() => setModalCorrida(false)}
-                onSalvar={recarregarCorridas} // ← SÓ ISSO
+                onSalvar={recarregarCorridas}
             />
 
             <ModalEditarCompra
@@ -219,6 +243,26 @@ export default function PaginaCompradorAdminCliente({ usuarioId }: Props) {
                 ano={anoSelecionado}
                 onFechar={() => setModalPagamento(false)}
                 onSalvar={recarregar}
+            />
+
+            {/* Modal de confirmação para exclusão (substitui confirm() nativo) */}
+            <ModalConfirmacao
+                aberto={modalExcluir}
+                titulo="Excluir Compra"
+                mensagem={
+                    compraExcluindo
+                        ? `Deseja excluir "${compraExcluindo.descricao}" (${compraExcluindo.cartao})? Esta ação não pode ser desfeita.`
+                        : 'Deseja excluir esta compra?'
+                }
+                textoConfirmar="Excluir"
+                textoCancelar="Cancelar"
+                corConfirmar="vermelho"
+                carregando={excluindo}
+                onConfirmar={confirmarExcluirCompra}
+                onCancelar={() => {
+                    setModalExcluir(false);
+                    setCompraExcluindo(null);
+                }}
             />
         </div>
     );
