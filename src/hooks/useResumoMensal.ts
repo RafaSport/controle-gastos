@@ -1,6 +1,7 @@
 // Hook compartilhado entre PaginaCompradorCliente e PaginaCompradorAdminCliente.
 // Centraliza toda a lógica de busca de dados e cálculos financeiros mensais.
 
+import { apiGet } from '@/lib/api-client';
 import {
     calcularDividaAnterior,
     calcularTotalComprasNoMes,
@@ -86,21 +87,21 @@ export function useResumoMensal({
         setCarregando(true);
 
         try {
-            const [resUsuario, resCompras, resMeses] = await Promise.all([
-                fetch(`/api/usuarios?id=${usuarioId}`),
-                fetch(`/api/compras/usuario?id=${usuarioId}`),
-                fetch(`/api/meses?id=${usuarioId}`),
+            const [dadosUsuario, dadosCompras, dadosMeses] = await Promise.all([
+                apiGet<Usuario | { erro: string }>(
+                    `/api/usuarios?id=${usuarioId}`
+                ),
+                apiGet<Compra[]>(`/api/compras/usuario?id=${usuarioId}`),
+                apiGet<MesFechado[]>(`/api/meses?id=${usuarioId}`),
             ]);
 
-            const dadosUsuario = await resUsuario.json();
-            const dadosCompras = await resCompras.json();
-            const dadosMeses = await resMeses.json();
-
-            setUsuario(dadosUsuario?.id ? dadosUsuario : null);
-            setCompras(Array.isArray(dadosCompras) ? dadosCompras : []);
-            setMesesFechados(Array.isArray(dadosMeses) ? dadosMeses : []);
+            // Validação: se a API retornar objeto de erro, trata como null
+            setUsuario('id' in dadosUsuario ? dadosUsuario : null);
+            setCompras(dadosCompras);
+            setMesesFechados(dadosMeses);
         } catch (erro) {
             console.error('Erro ao buscar dados:', erro);
+            // Em produção, aqui poderia disparar um toast de erro global
         } finally {
             setCarregando(false);
         }
@@ -119,11 +120,10 @@ export function useResumoMensal({
         setCarregandoUber(true);
 
         try {
-            const res = await fetch(
+            const data = await apiGet<Corrida[]>(
                 `/api/corridas/usuario?id=${usuarioId}&mes=${mesSelecionado}&ano=${anoSelecionado}`
             );
-            const data = await res.json();
-            setCorridas(Array.isArray(data) ? data : []);
+            setCorridas(data);
         } catch (erro) {
             console.error('Erro ao buscar corridas:', erro);
         } finally {
@@ -183,7 +183,7 @@ export function useResumoMensal({
         );
     }, [compras, mesSelecionado, anoSelecionado]);
 
-    // Total de corridas Uber no mês (agora usa helper centralizado)
+    // Total de corridas Uber no mês
     const totalUber = useMemo(() => {
         return calcularTotalCorridas(corridas);
     }, [corridas]);
