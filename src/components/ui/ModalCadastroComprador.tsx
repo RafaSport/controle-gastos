@@ -1,5 +1,6 @@
 'use client';
 
+import { apiPost } from '@/lib/api-client';
 import { useState } from 'react';
 import Botao from './Botao';
 import Input from './Input';
@@ -33,29 +34,25 @@ export default function ModalCadastroComprador({
 
         setCarregando(true);
 
-        const res = await fetch('/api/usuarios', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
+        try {
+            await apiPost('/api/usuarios', {
                 nome: nome.trim(),
                 sobrenome: sobrenome.trim(),
                 usaUber,
-            }),
-        });
+            });
 
-        setCarregando(false);
-
-        if (!res.ok) {
-            setErro('Erro ao cadastrar comprador. Tente novamente.');
-            return;
+            setNome('');
+            setSobrenome('');
+            setUsaUber(false);
+            onSalvar();
+            onFechar();
+        } catch (err: any) {
+            setErro(
+                err.message || 'Erro ao cadastrar comprador. Tente novamente.'
+            );
+        } finally {
+            setCarregando(false);
         }
-
-        // Limpa o formulário e avisa o pai para recarregar a lista
-        setNome('');
-        setSobrenome('');
-        setUsaUber(false);
-        onSalvar();
-        onFechar();
     }
 
     return (
@@ -76,7 +73,6 @@ export default function ModalCadastroComprador({
                     onKeyDown={(e) => e.key === 'Enter' && handleSalvar()}
                 />
 
-                {/* Toggle de Uber */}
                 <div className="flex items-center justify-between bg-zinc-800 rounded-lg px-3 py-2.5">
                     <div>
                         <p className="text-sm text-zinc-200">Usa Uber</p>
@@ -84,11 +80,9 @@ export default function ModalCadastroComprador({
                             Habilita controle de corridas
                         </p>
                     </div>
-                    {/* Toggle padrão */}
                     <Toggle value={usaUber} onChange={setUsaUber} />
                 </div>
 
-                {/* Aviso do login gerado automaticamente */}
                 {nome && sobrenome && (
                     <div className="bg-zinc-800 rounded-lg px-3 py-2">
                         <p className="text-xs text-zinc-400">

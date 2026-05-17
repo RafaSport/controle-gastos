@@ -1,5 +1,6 @@
 'use client';
 
+import { apiPost } from '@/lib/api-client';
 import { useState } from 'react';
 import Botao from './Botao';
 import Input from './Input';
@@ -54,29 +55,23 @@ export default function ModalPagamento({
 
         setCarregando(true);
 
-        const res = await fetch('/api/meses', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ usuarioId, mes, ano, totalPago }),
-        });
+        try {
+            await apiPost('/api/meses', { usuarioId, mes, ano, totalPago });
 
-        setCarregando(false);
-
-        if (!res.ok) {
-            setErro('Erro ao registrar pagamento.');
-            return;
+            setValorParcial('');
+            setTipoPagamento('total');
+            onSalvar();
+            onFechar();
+        } catch (err: any) {
+            setErro(err.message || 'Erro ao registrar pagamento.');
+        } finally {
+            setCarregando(false);
         }
-
-        setValorParcial('');
-        setTipoPagamento('total');
-        onSalvar();
-        onFechar();
     }
 
     return (
         <Modal aberto={aberto} titulo="Registrar Pagamento" onFechar={onFechar}>
             <div className="flex flex-col gap-4">
-                {/* Total do mês */}
                 <div className="bg-zinc-800 rounded-lg px-4 py-3 text-center">
                     <p className="text-xs text-zinc-500 mb-1">Total do mês</p>
                     <p className="text-2xl font-bold text-zinc-100">
@@ -84,39 +79,31 @@ export default function ModalPagamento({
                     </p>
                 </div>
 
-                {/* Seletor de tipo de pagamento */}
                 <div className="flex gap-2">
                     <button
                         type="button"
                         onClick={() => setTipoPagamento('total')}
-                        className={`
-                            flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors
-                            ${
-                                tipoPagamento === 'total'
-                                    ? 'bg-green-600 text-white'
-                                    : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
-                            }
-                        `}
+                        className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                            tipoPagamento === 'total'
+                                ? 'bg-green-600 text-white'
+                                : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+                        }`}
                     >
                         Pagar total
                     </button>
                     <button
                         type="button"
                         onClick={() => setTipoPagamento('parcial')}
-                        className={`
-                            flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors
-                            ${
-                                tipoPagamento === 'parcial'
-                                    ? 'bg-yellow-500 text-zinc-900'
-                                    : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
-                            }
-                        `}
+                        className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                            tipoPagamento === 'parcial'
+                                ? 'bg-yellow-500 text-zinc-900'
+                                : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+                        }`}
                     >
                         Pagar parcial
                     </button>
                 </div>
 
-                {/* Input de valor parcial */}
                 {tipoPagamento === 'parcial' && (
                     <Input
                         label="Valor a pagar (R$)"
@@ -128,7 +115,6 @@ export default function ModalPagamento({
                     />
                 )}
 
-                {/* Resumo do que ficará em dívida */}
                 {tipoPagamento === 'parcial' &&
                     valorParcial &&
                     (() => {

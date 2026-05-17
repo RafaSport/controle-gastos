@@ -1,5 +1,6 @@
 'use client';
 
+import { apiPut, apiPatch } from '@/lib/api-client';
 import { useEffect, useState } from 'react';
 import Botao from './Botao';
 import Input from './Input';
@@ -53,24 +54,21 @@ export default function ModalEditarComprador({
         }
 
         setCarregando(true);
-        const res = await fetch(`/api/usuarios/${comprador?.id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
+
+        try {
+            await apiPut(`/api/usuarios/${comprador?.id}`, {
                 nome: nome.trim(),
                 sobrenome: sobrenome.trim(),
                 usaUber,
-            }),
-        });
-        setCarregando(false);
+            });
 
-        if (!res.ok) {
-            setErro('Erro ao atualizar comprador.');
-            return;
+            onSalvar();
+            onFechar();
+        } catch (err: any) {
+            setErro(err.message || 'Erro ao atualizar comprador.');
+        } finally {
+            setCarregando(false);
         }
-
-        onSalvar();
-        onFechar();
     }
 
     async function handleResetarSenha() {
@@ -82,21 +80,17 @@ export default function ModalEditarComprador({
             return;
 
         setResetando(true);
-        const res = await fetch('/api/auth/alterar-senha', {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: comprador?.id }),
-        });
-        setResetando(false);
 
-        if (!res.ok) {
-            setErro('Erro ao resetar senha.');
-            return;
+        try {
+            await apiPatch('/api/auth/alterar-senha', { id: comprador?.id });
+
+            setResetOk(true);
+            setTimeout(() => setResetOk(false), 3000);
+        } catch (err: any) {
+            setErro(err.message || 'Erro ao resetar senha.');
+        } finally {
+            setResetando(false);
         }
-
-        // Mostra confirmação visual por 3 segundos
-        setResetOk(true);
-        setTimeout(() => setResetOk(false), 3000);
     }
 
     return (
@@ -115,41 +109,30 @@ export default function ModalEditarComprador({
                     onKeyDown={(e) => e.key === 'Enter' && handleSalvar()}
                 />
 
-                {/* Toggle Uber usando o componente reutilizável */}
                 <div className="flex items-center justify-between bg-zinc-800 rounded-lg px-3 py-2.5">
                     <div>
                         <p className="text-sm text-zinc-200">Usa Uber</p>
-                        <p className="text-xs text-zinc-500">
-                            Habilita controle de corridas
-                        </p>
+                        <p className="text-xs text-zinc-500">Habilita controle de corridas</p>
                     </div>
                     <Toggle value={usaUber} onChange={setUsaUber} />
                 </div>
 
-                {/* Aviso sobre login */}
                 <div className="bg-zinc-800 rounded-lg px-3 py-2">
                     <p className="text-xs text-zinc-500">
                         ⚠ O login não é alterado ao editar o nome.
                     </p>
                 </div>
 
-                {/* Reset de senha */}
                 <div className="flex items-center justify-between bg-zinc-800 rounded-lg px-3 py-2.5">
                     <div>
-                        <p className="text-sm text-zinc-200">
-                            Senha esquecida?
-                        </p>
+                        <p className="text-sm text-zinc-200">Senha esquecida?</p>
                         <p className="text-xs text-zinc-500">
                             Reseta para{' '}
-                            <span className="text-zinc-400 font-medium">
-                                {comprador?.login}123
-                            </span>
+                            <span className="text-zinc-400 font-medium">{comprador?.login}123</span>
                         </p>
                     </div>
                     {resetOk ? (
-                        <span className="text-xs text-green-400 font-medium">
-                            ✓ Resetada!
-                        </span>
+                        <span className="text-xs text-green-400 font-medium">✓ Resetada!</span>
                     ) : (
                         <Botao
                             cor="cinza"
@@ -173,11 +156,7 @@ export default function ModalEditarComprador({
                     <Botao cor="cinza" onClick={onFechar}>
                         Cancelar
                     </Botao>
-                    <Botao
-                        cor="verde"
-                        carregando={carregando}
-                        onClick={handleSalvar}
-                    >
+                    <Botao cor="verde" carregando={carregando} onClick={handleSalvar}>
                         Salvar
                     </Botao>
                 </div>

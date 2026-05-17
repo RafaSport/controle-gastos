@@ -1,5 +1,6 @@
 'use client';
 
+import { apiPut } from '@/lib/api-client';
 import { Cartao, Compra } from '@/types';
 import { useEffect, useState } from 'react';
 import Botao from './Botao';
@@ -52,7 +53,6 @@ export default function ModalEditarCompra({
     const [erro, setErro] = useState('');
     const [carregando, setCarregando] = useState(false);
 
-    // Preenche o formulário quando a compra muda
     useEffect(() => {
         if (compra) {
             setCartao(compra.cartao);
@@ -86,10 +86,8 @@ export default function ModalEditarCompra({
 
         setCarregando(true);
 
-        const res = await fetch(`/api/compras/${compra?.id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
+        try {
+            await apiPut(`/api/compras/${compra?.id}`, {
                 cartao,
                 descricao: descricao.trim(),
                 mesCompra,
@@ -98,17 +96,15 @@ export default function ModalEditarCompra({
                 anoInicio,
                 qtdParcelas,
                 valorParcela: parseFloat(valorParcela.replace(',', '.')),
-            }),
-        });
+            });
 
-        setCarregando(false);
-        if (!res.ok) {
-            setErro('Erro ao editar compra.');
-            return;
+            onSalvar();
+            onFechar();
+        } catch (err: any) {
+            setErro(err.message || 'Erro ao editar compra.');
+        } finally {
+            setCarregando(false);
         }
-
-        onSalvar();
-        onFechar();
     }
 
     return (
@@ -141,10 +137,11 @@ export default function ModalEditarCompra({
                                           }
                                         : {}
                                 }
-                                className={`
-                                    flex-1 py-2 rounded-lg text-xs font-bold transition-all
-                                    ${cartao === c ? 'text-white' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}
-                                `}
+                                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
+                                    cartao === c
+                                        ? 'text-white'
+                                        : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+                                }`}
                             >
                                 {NOMES_CARTAO[c]}
                             </button>

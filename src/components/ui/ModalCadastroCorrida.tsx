@@ -1,5 +1,6 @@
 'use client';
 
+import { apiPost } from '@/lib/api-client';
 import { useEffect, useState } from 'react';
 import Botao from './Botao';
 import Input from './Input';
@@ -36,9 +37,7 @@ function formatarData(data: Date): string {
 function diferencaEmDias(dataStr: string): number {
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
-
     const dataSelecionada = new Date(`${dataStr}T00:00:00`);
-
     return Math.round(
         (hoje.getTime() - dataSelecionada.getTime()) / (1000 * 60 * 60 * 24)
     );
@@ -72,11 +71,9 @@ export default function ModalCadastroCorrida({
 
     useEffect(() => {
         if (!data) return;
-
         const dias = diferencaEmDias(data);
-
         if (dias >= 3) {
-            setAlerta(`Esta corrida foi ha ${dias} dias. Tem certeza da data?`);
+            setAlerta(`Esta corrida foi há ${dias} dias. Tem certeza da data?`);
         } else {
             setAlerta('');
         }
@@ -91,38 +88,33 @@ export default function ModalCadastroCorrida({
         setErro('');
 
         if (!data) {
-            setErro('Data obrigatoria.');
+            setErro('Data obrigatória.');
             return;
         }
 
         if (!valor || parseFloat(valor.replace(',', '.')) <= 0) {
-            setErro('Valor invalido.');
+            setErro('Valor inválido.');
             return;
         }
 
         setCarregando(true);
 
-        const res = await fetch('/api/corridas', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
+        try {
+            await apiPost('/api/corridas', {
                 usuarioId,
                 data,
                 mesReferencia: mesEmAberto,
                 anoReferencia: anoEmAberto,
                 valor: parseFloat(valor.replace(',', '.')),
-            }),
-        });
+            });
 
-        setCarregando(false);
-
-        if (!res.ok) {
-            setErro('Erro ao cadastrar corrida.');
-            return;
+            onSalvar();
+            onFechar();
+        } catch (err: any) {
+            setErro(err.message || 'Erro ao cadastrar corrida.');
+        } finally {
+            setCarregando(false);
         }
-
-        onSalvar();
-        onFechar();
     }
 
     return (
@@ -136,10 +128,9 @@ export default function ModalCadastroCorrida({
                     onChange={(e) => handleMudancaData(e.target.value)}
                 />
 
-                {/* Informa em qual mes financeiro a corrida sera cobrada. */}
                 <div className="bg-zinc-800 rounded-lg px-3 py-2">
                     <p className="text-xs text-zinc-400">
-                        Corrida sera lancada em:
+                        Corrida será lançada em:
                         <span className="text-blue-400 font-medium ml-1">
                             {MESES[mesEmAberto - 1]}/{anoEmAberto}
                         </span>
