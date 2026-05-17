@@ -1,11 +1,5 @@
+import { criarDataLocalMeioDia } from '@/lib/utils';
 import * as corridaRepo from '@/repositories/corrida.repository';
-
-function criarDataLocalDaCorrida(data: string) {
-    const [ano, mes, dia] = data.split('-').map(Number);
-
-    // Usa meio-dia local para evitar que conversoes UTC/local exibam o dia anterior.
-    return new Date(ano, mes - 1, dia, 12, 0, 0);
-}
 
 // Lista corridas de um mes para exibicao.
 export async function listarCorridas(
@@ -26,7 +20,7 @@ export async function cadastrarCorrida(dados: {
 }) {
     return await corridaRepo.criarCorrida({
         usuarioId: dados.usuarioId,
-        data: criarDataLocalDaCorrida(dados.data),
+        data: criarDataLocalMeioDia(dados.data),
         mesReferencia: dados.mesReferencia,
         anoReferencia: dados.anoReferencia,
         valor: dados.valor,

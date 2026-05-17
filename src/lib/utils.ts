@@ -190,3 +190,20 @@ export function gerarMesesDisponiveis(
 
     return lista;
 }
+
+/**
+ * Calcula o total de corridas Uber.
+ * Soma o valor de todas as corridas no array.
+ */
+export function calcularTotalCorridas(corridas: { valor: number }[]): number {
+    return corridas.reduce((acc, c) => acc + c.valor, 0);
+}
+
+/**
+ * Cria uma data local ao meio-dia a partir de uma string ISO (YYYY-MM-DD).
+ * O meio-dia (12:00) evita deslocamento de fuso que pode exibir o dia anterior.
+ */
+export function criarDataLocalMeioDia(dataISO: string): Date {
+    const [ano, mes, dia] = dataISO.split('-').map(Number);
+    return new Date(ano, mes - 1, dia, 12, 0, 0);
+}

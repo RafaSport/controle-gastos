@@ -1,13 +1,11 @@
 // Hook compartilhado entre PaginaCompradorCliente e PaginaCompradorAdminCliente.
 // Centraliza toda a lógica de busca de dados e cálculos financeiros mensais.
-//
-// ANTES: Mesma lógica duplicada em 2 arquivos
-// DEPOIS: Lógica em 1 lugar, páginas ficam apenas com renderização
 
 import {
     calcularDividaAnterior,
     calcularTotalComprasNoMes,
     calcularTotalConsolidado,
+    calcularTotalCorridas,
     encontrarPrimeiroMesEmAberto,
     gerarMesesDisponiveis,
 } from '@/lib/utils';
@@ -117,7 +115,7 @@ export function useResumoMensal({
     // FUNÇÃO: Buscar corridas Uber (só se usaUber = true)
     // ----------------------------------------
     async function buscarCorridas() {
-        if (!usuario?.usaUber) return; // ← USA O USUÁRIO QUE JÁ FOI BUSCADO
+        if (!usuario?.usaUber) return;
         setCarregandoUber(true);
 
         try {
@@ -135,7 +133,6 @@ export function useResumoMensal({
 
     // ----------------------------------------
     // FUNÇÃO PÚBLICA: Recarregar apenas corridas
-    // Usada após cadastrar/excluir uma corrida
     // ----------------------------------------
     async function recarregarCorridas() {
         await buscarCorridas();
@@ -147,7 +144,7 @@ export function useResumoMensal({
     }, [usuarioId, mesSelecionado, anoSelecionado]);
 
     // ----------------------------------------
-    // DADOS DERIVADOS — Calculados com useMemo (performance)
+    // DADOS DERIVADOS — Calculados com useMemo
     // ----------------------------------------
 
     // Mês em aberto (primeiro mês não fechado a partir de hoje)
@@ -186,9 +183,9 @@ export function useResumoMensal({
         );
     }, [compras, mesSelecionado, anoSelecionado]);
 
-    // Total de corridas Uber no mês
+    // Total de corridas Uber no mês (agora usa helper centralizado)
     const totalUber = useMemo(() => {
-        return corridas.reduce((acc, c) => acc + c.valor, 0);
+        return calcularTotalCorridas(corridas);
     }, [corridas]);
 
     // Dívida anterior (do último mês fechado antes do atual)
@@ -213,35 +210,24 @@ export function useResumoMensal({
     // RETORNO
     // ----------------------------------------
     return {
-        // Dados brutos
         usuario,
         compras,
         corridas,
         mesesFechados,
-
-        // UI
         carregando,
         carregandoUber,
-
-        // Seleção
         mesSelecionado,
         anoSelecionado,
         setMesSelecionado,
         setAnoSelecionado,
-
-        // Derivados
         mesEmAberto,
         anoEmAberto,
         mesesDisponiveis,
         mesFechado,
-
-        // Financeiro
         totalCompras,
         totalUber,
         dividaAnterior,
         totalConsolidado,
-
-        // Ações
         recarregar: buscarDados,
         recarregarCorridas,
     };
