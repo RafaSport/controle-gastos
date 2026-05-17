@@ -20,30 +20,33 @@ const Cartao = {
     ITAU: 'ITAU',
 } as const;
 
+// Senha do admin
+const SENHA_ADMIN = 'Rgl53417220';
+
 // Senha padrão para seed (pode ser sobrescrita via .env)
 const SENHA_PADRAO_SEED = process.env.SENHA_PADRAO_SEED ?? '123';
 
 async function main() {
-    // ==================== ADMIN ====================
+    // ==================== ADMIN (RAFAEL.GUEDES) ====================
     const adminExiste = await (prisma as any).usuario.findUnique({
-        where: { login: 'admin' },
+        where: { login: 'rafael.guedes' },
     });
 
     if (!adminExiste) {
-        const senha = await bcrypt.hash(`admin${SENHA_PADRAO_SEED}`, 10);
+        const senha = await bcrypt.hash(SENHA_ADMIN, 10);
         await (prisma as any).usuario.create({
             data: {
-                nome: 'Admin',
-                sobrenome: 'Sistema',
-                login: 'admin',
+                nome: 'Rafael',
+                sobrenome: 'Guedes',
+                login: 'rafael.guedes',
                 senha,
                 papel: Papel.ADMIN,
                 primeiroLogin: false,
             },
         });
-        console.log('✅ Admin criado');
+        console.log('✅ Admin rafael.guedes criado');
     } else {
-        console.log('ℹ️ Admin já existe');
+        console.log('ℹ️ Admin rafael.guedes já existe');
     }
 
     // ==================== COMPRADORES ====================
@@ -85,7 +88,6 @@ async function main() {
                 `✅ Comprador criado: ${login} / senha: ${gerarSenhaPadrao(login)}`
             );
 
-            // Compras padrão para todos exceto Pedro
             if (c.nome !== 'Pedro') {
                 const compras = gerarComprasPadrao(usuario.id, mes, ano);
                 for (const compra of compras)
@@ -93,7 +95,6 @@ async function main() {
                 console.log(`   └─ ${compras.length} compras criadas`);
             }
 
-            // Compras variadas para Pedro
             if (c.nome === 'Pedro') {
                 const compras = gerarComprasVariadas(usuario.id, mes, ano);
                 for (const compra of compras)
@@ -103,7 +104,6 @@ async function main() {
                 );
             }
 
-            // Corridas para quem usa Uber
             if (c.usaUber) {
                 const corridas = [
                     {
