@@ -13,10 +13,13 @@ export const schemaCadastroUsuario = z.object({
         .string()
         .min(2, 'Sobrenome deve ter pelo menos 2 caracteres')
         .max(50, 'Sobrenome muito longo'),
+    // Login é gerado automaticamente no backend — não obrigatório no input do frontend
     login: z
         .string()
         .min(3, 'Login deve ter pelo menos 3 caracteres')
-        .max(20, 'Login muito longo'),
+        .max(20, 'Login muito longo')
+        .optional(),
+    // Senha é gerada automaticamente no backend — não obrigatória no input do frontend
     senha: z
         .string()
         .min(5, 'Senha deve ter pelo menos 5 caracteres')
@@ -26,7 +29,7 @@ export const schemaCadastroUsuario = z.object({
 });
 
 // ============================================
-// SCHEMA: Troca de senha
+// SCHEMA: Troca de senha (usuário informa senha atual)
 // ============================================
 
 export const schemaTrocaSenha = z.object({
@@ -36,6 +39,7 @@ export const schemaTrocaSenha = z.object({
 
 // ============================================
 // SCHEMA: Alteração de senha (admin reset / primeiro acesso)
+// Usado em /api/auth/alterar-senha — não exige senhaAtual
 // ============================================
 
 export const schemaAlterarSenha = z.object({

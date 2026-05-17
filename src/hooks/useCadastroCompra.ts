@@ -1,7 +1,6 @@
 /**
  * Hook que encapsula toda a lógica de estado, validação
  * e submit do formulário de cadastro de compra.
- * Separa a "cabeça" da "tela".
  */
 
 import { apiPost } from '@/lib/api-client';
@@ -11,22 +10,17 @@ import { Cartao } from '@/types';
 import { useEffect, useState } from 'react';
 
 // ============================================
-// INTERFACE — O que o hook recebe e retorna
+// INTERFACE
 // ============================================
 
 interface UseCadastroCompraProps {
-    /** ID do usuário que está fazendo a compra */
     usuarioId: string;
-    /** Se o modal está aberto (controla reset do formulário) */
     aberto: boolean;
-    /** Callback chamado após salvar com sucesso */
     onSalvar: () => void;
-    /** Callback para fechar o modal */
     onFechar: () => void;
 }
 
 interface UseCadastroCompraReturn {
-    // Estados do formulário (para bindar nos inputs)
     cartao: Cartao;
     setCartao: (c: Cartao) => void;
     descricao: string;
@@ -43,24 +37,19 @@ interface UseCadastroCompraReturn {
     setQtdParcelas: (q: number) => void;
     valorParcela: string;
     setValorParcela: (v: string) => void;
-
-    // Estados de UI (erros, alertas, loading)
-    erro: string;
+    carregando: boolean;
+    feedback: { tipo: 'sucesso' | 'erro'; msg: string } | null;
     alertaInicio: string;
     alertaCompra: string;
-    carregando: boolean;
-
-    // Dados derivados (calculados)
     mesAtual: number;
     anoAtual: number;
     mesFinalPreview: string;
-
-    // Ações
     handleSalvar: () => Promise<void>;
+    limparFeedback: () => void;
 }
 
 // ============================================
-// CONSTANTES — Reutilizadas no hook e no componente
+// CONSTANTES
 // ============================================
 
 export const MESES = [
@@ -88,17 +77,11 @@ export function useCadastroCompra({
     onSalvar,
     onFechar,
 }: UseCadastroCompraProps): UseCadastroCompraReturn {
-    // ----------------------------------------
-    // DATA ATUAL (referência para validações)
-    // ----------------------------------------
     const hoje = new Date();
     const mesAtual = hoje.getMonth() + 1;
     const anoAtual = hoje.getFullYear();
 
-    // ----------------------------------------
-    // ESTADOS DO FORMULÁRIO
-    // ----------------------------------------
-    const [cartao, setCartao] = useState(<Cartao>'NUBANK');
+    const [cartao, setCartao] = useState<Cartao>('NUBANK');
     const [descricao, setDescricao] = useState('');
     const [mesCompra, setMesCompra] = useState(mesAtual);
     const [anoCompra, setAnoCompra] = useState(anoAtual);
@@ -107,15 +90,14 @@ export function useCadastroCompra({
     const [qtdParcelas, setQtdParcelas] = useState(1);
     const [valorParcela, setValorParcela] = useState('');
 
-    // Estados de UI
-    const [erro, setErro] = useState('');
+    const [carregando, setCarregando] = useState(false);
+    const [feedback, setFeedback] = useState<{
+        tipo: 'sucesso' | 'erro';
+        msg: string;
+    } | null>(null);
     const [alertaInicio, setAlertaInicio] = useState('');
     const [alertaCompra, setAlertaCompra] = useState('');
-    const [carregando, setCarregando] = useState(false);
 
-    // ----------------------------------------
-    // EFEITO 1: Reseta formulário quando o modal abre
-    // ----------------------------------------
     useEffect(() => {
         if (aberto) {
             const agora = new Date();
@@ -130,23 +112,17 @@ export function useCadastroCompra({
             setAnoInicio(a);
             setQtdParcelas(1);
             setValorParcela('');
-            setErro('');
+            setFeedback(null);
             setAlertaInicio('');
             setAlertaCompra('');
         }
     }, [aberto]);
 
-    // ----------------------------------------
-    // EFEITO 2: Valida mês da compra
-    // Regra: não pode ser futuro. Alerta se 3+ meses atrás.
-    // ----------------------------------------
     useEffect(() => {
-        // Usa paraIndiceMes de utils.ts (antes era emMeses local)
         const compraEmMeses = paraIndiceMes(mesCompra, anoCompra);
         const atualEmMeses = paraIndiceMes(mesAtual, anoAtual);
         const diferencaMeses = atualEmMeses - compraEmMeses;
 
-        // Se tentou colocar no futuro, corrige para o mês atual
         if (compraEmMeses > atualEmMeses) {
             setMesCompra(mesAtual);
             setAnoCompra(anoAtual);
@@ -154,7 +130,6 @@ export function useCadastroCompra({
             return;
         }
 
-        // Alerta se a compra foi há 3+ meses
         if (diferencaMeses >= 3) {
             setAlertaCompra(
                 `Esta compra foi há ${diferencaMeses} meses (${MESES[mesCompra - 1]}/${anoCompra}). Isso está certo?`
@@ -164,17 +139,11 @@ export function useCadastroCompra({
         }
     }, [mesCompra, anoCompra, mesAtual, anoAtual]);
 
-    // ----------------------------------------
-    // EFEITO 3: Valida mês de início
-    // Regra: nunca antes da compra. Alerta se 3+ meses depois.
-    // ----------------------------------------
     useEffect(() => {
-        // Usa paraIndiceMes de utils.ts (antes era emMeses local)
         const compraEmMeses = paraIndiceMes(mesCompra, anoCompra);
         const inicioEmMeses = paraIndiceMes(mesInicio, anoInicio);
         const diferencaMeses = inicioEmMeses - compraEmMeses;
 
-        // Se início é antes da compra, corrige para igualar
         if (inicioEmMeses < compraEmMeses) {
             setMesInicio(mesCompra);
             setAnoInicio(anoCompra);
@@ -182,7 +151,6 @@ export function useCadastroCompra({
             return;
         }
 
-        // Alerta se o início é 3+ meses depois da compra
         if (diferencaMeses >= 3) {
             setAlertaInicio(
                 `O pagamento só começa em ${MESES[mesInicio - 1]}/${anoInicio}, que é ${diferencaMeses} meses depois da compra. Isso está certo?`
@@ -192,9 +160,6 @@ export function useCadastroCompra({
         }
     }, [mesCompra, anoCompra, mesInicio, anoInicio]);
 
-    // ----------------------------------------
-    // DADO DERIVADO: Preview do mês final
-    // ----------------------------------------
     const mesFinalPreview = (() => {
         const { mesFinal, anoFinal } = calcularMesFinal(
             mesInicio,
@@ -204,29 +169,23 @@ export function useCadastroCompra({
         return `${MESES[mesFinal - 1]}/${anoFinal}`;
     })();
 
-    // ----------------------------------------
-    // AÇÃO: Salvar compra
-    // ----------------------------------------
     async function handleSalvar() {
-        setErro('');
+        setFeedback(null);
 
-        // Validação 1: descrição obrigatória
         if (!descricao.trim()) {
-            setErro('Descrição obrigatória.');
+            setFeedback({ tipo: 'erro', msg: 'Descrição obrigatória.' });
             return;
         }
 
-        // Validação 2: valor deve ser > 0
         const valorNumerico = parseFloat(valorParcela.replace(',', '.'));
         if (!valorParcela || valorNumerico <= 0) {
-            setErro('Valor inválido.');
+            setFeedback({ tipo: 'erro', msg: 'Valor inválido.' });
             return;
         }
 
         setCarregando(true);
 
         try {
-            // Usa apiPost — erro HTTP já é tratado com throw Error
             await apiPost('/api/compras', {
                 usuarioId,
                 cartao,
@@ -239,27 +198,38 @@ export function useCadastroCompra({
                 valorParcela: valorNumerico,
             });
 
-            onSalvar(); // Notifica pai que salvou
-            onFechar(); // Fecha modal
+            setCarregando(false);
+            setFeedback({ tipo: 'sucesso', msg: 'Compra cadastrada!' });
         } catch (err: any) {
-            // apiPost já joga Error com mensagem da API
-            // Mantém compatibilidade com o sistema de erro customizado
+            setCarregando(false);
             if (err instanceof Error) {
-                setErro(err.message);
+                setFeedback({ tipo: 'erro', msg: err.message });
             } else {
                 const erroRede = AppError.rede();
-                setErro(erroRede.mensagemUsuario);
+                setFeedback({ tipo: 'erro', msg: erroRede.mensagemUsuario });
             }
-        } finally {
-            setCarregando(false);
         }
     }
 
-    // ----------------------------------------
-    // RETORNO: Tudo que o componente precisa
-    // ----------------------------------------
+    function limparFeedback() {
+        const eraSucesso = feedback?.tipo === 'sucesso';
+        setFeedback(null);
+
+        if (eraSucesso) {
+            setCartao('NUBANK');
+            setDescricao('');
+            setMesCompra(mesAtual);
+            setAnoCompra(anoAtual);
+            setMesInicio(mesAtual);
+            setAnoInicio(anoAtual);
+            setQtdParcelas(1);
+            setValorParcela('');
+            onSalvar();
+            onFechar();
+        }
+    }
+
     return {
-        // Estados
         cartao,
         setCartao,
         descricao,
@@ -276,19 +246,14 @@ export function useCadastroCompra({
         setQtdParcelas,
         valorParcela,
         setValorParcela,
-
-        // UI
-        erro,
+        carregando,
+        feedback,
         alertaInicio,
         alertaCompra,
-        carregando,
-
-        // Derivados
         mesAtual,
         anoAtual,
         mesFinalPreview,
-
-        // Ações
         handleSalvar,
+        limparFeedback,
     };
 }

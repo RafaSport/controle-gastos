@@ -3,6 +3,7 @@
 import { apiPost } from '@/lib/api-client';
 import { useEffect, useState } from 'react';
 import Botao from './Botao';
+import Feedback from './Feedback';
 import Input from './Input';
 import Modal from './Modal';
 
@@ -56,16 +57,19 @@ export default function ModalCadastroCorrida({
 
     const [data, setData] = useState(dataHoje);
     const [valor, setValor] = useState('');
-    const [erro, setErro] = useState('');
     const [alerta, setAlerta] = useState('');
     const [carregando, setCarregando] = useState(false);
+    const [feedback, setFeedback] = useState<{
+        tipo: 'sucesso' | 'erro';
+        msg: string;
+    } | null>(null);
 
     useEffect(() => {
         if (aberto) {
             setData(formatarData(new Date()));
             setValor('');
-            setErro('');
             setAlerta('');
+            setFeedback(null);
         }
     }, [aberto]);
 
@@ -85,15 +89,15 @@ export default function ModalCadastroCorrida({
     }
 
     async function handleSalvar() {
-        setErro('');
+        setFeedback(null);
 
         if (!data) {
-            setErro('Data obrigatória.');
+            setFeedback({ tipo: 'erro', msg: 'Data obrigatória.' });
             return;
         }
 
         if (!valor || parseFloat(valor.replace(',', '.')) <= 0) {
-            setErro('Valor inválido.');
+            setFeedback({ tipo: 'erro', msg: 'Valor inválido.' });
             return;
         }
 
@@ -108,71 +112,100 @@ export default function ModalCadastroCorrida({
                 valor: parseFloat(valor.replace(',', '.')),
             });
 
-            onSalvar();
-            onFechar();
-        } catch (err: any) {
-            setErro(err.message || 'Erro ao cadastrar corrida.');
-        } finally {
             setCarregando(false);
+            setFeedback({ tipo: 'sucesso', msg: 'Corrida cadastrada!' });
+        } catch (err: any) {
+            setCarregando(false);
+            setFeedback({
+                tipo: 'erro',
+                msg: err.message || 'Erro ao cadastrar corrida.',
+            });
         }
     }
 
+    function handleConcluir() {
+        const eraSucesso = feedback?.tipo === 'sucesso';
+        setFeedback(null);
+
+        if (eraSucesso) {
+            onSalvar();
+            onFechar();
+        }
+    }
+
+    function handleFechar() {
+        setFeedback(null);
+        setAlerta('');
+        onFechar();
+    }
+
     return (
-        <Modal aberto={aberto} titulo="Nova Corrida Uber" onFechar={onFechar}>
+        <Modal
+            aberto={aberto}
+            titulo="Nova Corrida Uber"
+            onFechar={handleFechar}
+        >
             <div className="flex flex-col gap-4">
-                <Input
-                    label="Data da corrida"
-                    type="date"
-                    value={data}
-                    max={dataHoje}
-                    onChange={(e) => handleMudancaData(e.target.value)}
-                />
+                {feedback ? (
+                    <Feedback
+                        tipo={feedback.tipo}
+                        mensagem={feedback.msg}
+                        onConcluir={handleConcluir}
+                    />
+                ) : (
+                    <>
+                        <Input
+                            label="Data da corrida"
+                            type="date"
+                            value={data}
+                            max={dataHoje}
+                            onChange={(e) => handleMudancaData(e.target.value)}
+                        />
 
-                <div className="bg-zinc-800 rounded-lg px-3 py-2">
-                    <p className="text-xs text-zinc-400">
-                        Corrida será lançada em:
-                        <span className="text-blue-400 font-medium ml-1">
-                            {MESES[mesEmAberto - 1]}/{anoEmAberto}
-                        </span>
-                    </p>
-                </div>
+                        <div className="bg-zinc-800 rounded-lg px-3 py-2">
+                            <p className="text-xs text-zinc-400">
+                                Corrida será lançada em:
+                                <span className="text-blue-400 font-medium ml-1">
+                                    {MESES[mesEmAberto - 1]}/{anoEmAberto}
+                                </span>
+                            </p>
+                        </div>
 
-                {alerta && (
-                    <div className="flex items-start gap-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg px-3 py-2">
-                        <span className="text-yellow-400 shrink-0 mt-0.5">
-                            !
-                        </span>
-                        <p className="text-xs text-yellow-400">{alerta}</p>
-                    </div>
+                        {alerta && (
+                            <div className="flex items-start gap-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg px-3 py-2">
+                                <span className="text-yellow-400 shrink-0 mt-0.5">
+                                    !
+                                </span>
+                                <p className="text-xs text-yellow-400">
+                                    {alerta}
+                                </p>
+                            </div>
+                        )}
+
+                        <Input
+                            label="Valor (R$)"
+                            placeholder="Ex: 25,50"
+                            value={valor}
+                            onChange={(e) => setValor(e.target.value)}
+                            onKeyDown={(e) =>
+                                e.key === 'Enter' && handleSalvar()
+                            }
+                        />
+
+                        <div className="flex gap-2 justify-end">
+                            <Botao cor="cinza" onClick={handleFechar}>
+                                Cancelar
+                            </Botao>
+                            <Botao
+                                cor="verde"
+                                carregando={carregando}
+                                onClick={handleSalvar}
+                            >
+                                Salvar
+                            </Botao>
+                        </div>
+                    </>
                 )}
-
-                <Input
-                    label="Valor (R$)"
-                    placeholder="Ex: 25,50"
-                    value={valor}
-                    onChange={(e) => setValor(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSalvar()}
-                />
-
-                {erro && (
-                    <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
-                        <span className="text-red-400 shrink-0">!</span>
-                        <p className="text-xs text-red-400">{erro}</p>
-                    </div>
-                )}
-
-                <div className="flex gap-2 justify-end">
-                    <Botao cor="cinza" onClick={onFechar}>
-                        Cancelar
-                    </Botao>
-                    <Botao
-                        cor="verde"
-                        carregando={carregando}
-                        onClick={handleSalvar}
-                    >
-                        Salvar
-                    </Botao>
-                </div>
             </div>
         </Modal>
     );
