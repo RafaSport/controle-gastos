@@ -162,6 +162,7 @@ export default function PaginaCompradorAdminCliente({ usuarioId }: Props) {
                         ano={anoSelecionado}
                         corridas={corridas}
                         carregando={carregandoUber}
+                        onExcluir={recarregarCorridas}
                     />
                 )}
 

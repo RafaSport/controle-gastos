@@ -1,16 +1,23 @@
 'use client';
 
+import { apiDelete } from '@/lib/api-client';
 import { Corrida } from '@/types';
+import { Trash2 } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 import { useState } from 'react';
 import Botao from './Botao';
+import Feedback from './Feedback';
 import Modal from './Modal';
+import ModalConfirmacao from './ModalConfirmacao';
 
 interface CardUberProps {
     usuarioId: string;
     mes: number;
     ano: number;
-    corridas: Corrida[]; // recebe as corridas já carregadas
+    corridas: Corrida[];
     carregando: boolean;
+    /** Callback chamado após excluir uma corrida (para recarregar dados no pai) */
+    onExcluir?: () => void;
 }
 
 const MESES = [
@@ -30,8 +37,6 @@ const MESES = [
 
 function formatarDataCorrida(data: string) {
     const dataCorrida = new Date(data);
-
-    // Usa UTC para exibir exatamente o dia salvo, sem deslocar pelo fuso do navegador.
     return dataCorrida.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
 }
 
@@ -41,11 +46,59 @@ export default function CardUber({
     ano,
     corridas,
     carregando,
+    onExcluir,
 }: CardUberProps) {
-    const [modalAberto, setModalAberto] = useState(false);
+    const { data: session } = useSession();
+    const isAdmin = (session?.user as any)?.papel === 'ADMIN';
 
-    // Total calculado a partir das corridas recebidas
+    const [modalAberto, setModalAberto] = useState(false);
+    const [modalConfirmar, setModalConfirmar] = useState(false);
+    const [corridaExcluindo, setCorridaExcluindo] = useState<Corrida | null>(
+        null
+    );
+    const [excluindo, setExcluindo] = useState(false);
+    const [feedback, setFeedback] = useState<{
+        tipo: 'sucesso' | 'erro';
+        msg: string;
+    } | null>(null);
+
     const total = corridas.reduce((acc, c) => acc + c.valor, 0);
+
+    /** Abre modal de confirmação para excluir corrida */
+    function handleExcluir(corrida: Corrida) {
+        setCorridaExcluindo(corrida);
+        setModalConfirmar(true);
+    }
+
+    /** Executa exclusão após confirmação */
+    async function confirmarExcluir() {
+        if (!corridaExcluindo) return;
+
+        setExcluindo(true);
+
+        try {
+            await apiDelete(`/api/corridas/${corridaExcluindo.id}`);
+            setExcluindo(false);
+            setModalConfirmar(false);
+            setCorridaExcluindo(null);
+            setFeedback({ tipo: 'sucesso', msg: 'Corrida excluída!' });
+
+            // Notifica o pai para recarregar dados
+            if (onExcluir) onExcluir();
+        } catch (err: any) {
+            setExcluindo(false);
+            setModalConfirmar(false);
+            setCorridaExcluindo(null);
+            setFeedback({
+                tipo: 'erro',
+                msg: err.message || 'Erro ao excluir corrida.',
+            });
+        }
+    }
+
+    function handleFecharFeedback() {
+        setFeedback(null);
+    }
 
     return (
         <>
@@ -66,7 +119,6 @@ export default function CardUber({
                 </div>
 
                 <div className="flex items-center gap-4">
-                    {/* Total já visível no card */}
                     {!carregando && (
                         <div className="text-right">
                             <p className="text-xs text-zinc-500">Total</p>
@@ -86,14 +138,23 @@ export default function CardUber({
                 </div>
             </div>
 
-            {/* Modal com tabela de corridas */}
+            {/* Modal com tabela de corridas + exclusão admin */}
             <Modal
                 aberto={modalAberto}
                 titulo={`Corridas — ${MESES[mes - 1]}/${ano}`}
-                onFechar={() => setModalAberto(false)}
+                onFechar={() => {
+                    setModalAberto(false);
+                    setFeedback(null);
+                }}
                 tamanho="md"
             >
-                {carregando ? (
+                {feedback ? (
+                    <Feedback
+                        tipo={feedback.tipo}
+                        mensagem={feedback.msg}
+                        onConcluir={handleFecharFeedback}
+                    />
+                ) : carregando ? (
                     <p className="text-center text-zinc-500 text-sm py-6">
                         Carregando...
                     </p>
@@ -113,6 +174,12 @@ export default function CardUber({
                                         <th className="px-3 py-2 text-right">
                                             Valor
                                         </th>
+                                        {/* Coluna de ações só para admin */}
+                                        {isAdmin && (
+                                            <th className="px-3 py-2 text-center w-12">
+                                                Ação
+                                            </th>
+                                        )}
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -136,6 +203,22 @@ export default function CardUber({
                                                     .toFixed(2)
                                                     .replace('.', ',')}
                                             </td>
+                                            {/* Botão excluir só para admin */}
+                                            {isAdmin && (
+                                                <td className="px-3 py-2 text-center">
+                                                    <button
+                                                        onClick={() =>
+                                                            handleExcluir(
+                                                                corrida
+                                                            )
+                                                        }
+                                                        className="p-1.5 rounded-md bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors"
+                                                        title="Excluir corrida"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </td>
+                                            )}
                                         </tr>
                                     ))}
                                 </tbody>
@@ -155,6 +238,26 @@ export default function CardUber({
                     </div>
                 )}
             </Modal>
+
+            {/* Modal de confirmação para exclusão */}
+            <ModalConfirmacao
+                aberto={modalConfirmar}
+                titulo="Excluir Corrida"
+                mensagem={
+                    corridaExcluindo
+                        ? `Deseja excluir a corrida de ${formatarDataCorrida(corridaExcluindo.data)} no valor de R$ ${corridaExcluindo.valor.toFixed(2).replace('.', ',')}?`
+                        : 'Deseja excluir esta corrida?'
+                }
+                textoConfirmar="Excluir"
+                textoCancelar="Cancelar"
+                corConfirmar="vermelho"
+                carregando={excluindo}
+                onConfirmar={confirmarExcluir}
+                onCancelar={() => {
+                    setModalConfirmar(false);
+                    setCorridaExcluindo(null);
+                }}
+            />
         </>
     );
 }
