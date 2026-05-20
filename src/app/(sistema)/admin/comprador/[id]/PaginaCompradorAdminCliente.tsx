@@ -1,6 +1,3 @@
-// Dashboard do comprador (visão admin)
-// CONTÉM: lógica financeira no hook, ações admin na página
-
 'use client';
 
 import Header from '@/components/layout/Header';
@@ -12,12 +9,13 @@ import ModalCadastroCompra from '@/components/ui/ModalCadastroCompra';
 import ModalCadastroCorrida from '@/components/ui/ModalCadastroCorrida';
 import ModalConfirmacao from '@/components/ui/ModalConfirmacao';
 import ModalEditarCompra from '@/components/ui/ModalEditarCompra';
+import ModalEditarComprador from '@/components/ui/ModalEditarComprador';
 import ModalPagamento from '@/components/ui/ModalPagamento';
 import SeletorMes from '@/components/ui/SeletorMes';
 import TabelaCompras from '@/components/ui/TabelaCompras';
 import { useResumoMensal } from '@/hooks/useResumoMensal';
 import { Compra } from '@/types';
-import { ArrowLeft, PlusCircle } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Trash2 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -82,6 +80,11 @@ function PaginaCompradorAdminClienteContent({ usuarioId }: Props) {
     const [modalPagamento, setModalPagamento] = useState(false);
     const [compraEditando, setCompraEditando] = useState<Compra | null>(null);
 
+    // Estados para ações do comprador
+    const [modalEditarComprador, setModalEditarComprador] = useState(false);
+    const [modalExcluirComprador, setModalExcluirComprador] = useState(false);
+    const [excluindoComprador, setExcluindoComprador] = useState(false);
+
     // Estados do modal de confirmação (substitui confirm() nativo)
     const [modalExcluir, setModalExcluir] = useState(false);
     const [compraExcluindo, setCompraExcluindo] = useState<Compra | null>(null);
@@ -120,6 +123,30 @@ function PaginaCompradorAdminClienteContent({ usuarioId }: Props) {
             setExcluindo(false);
             setModalExcluir(false);
             setCompraExcluindo(null);
+        }
+    }
+
+    // ----------------------------------------
+    // AÇÕES DO COMPRADOR
+    // ----------------------------------------
+
+    async function handleExcluirComprador() {
+        setModalExcluirComprador(true);
+    }
+
+    async function confirmarExcluirComprador() {
+        setExcluindoComprador(true);
+
+        try {
+            await fetch(`/api/usuarios/${usuarioId}`, {
+                method: 'DELETE',
+            });
+            router.push('/admin');
+        } catch (erro) {
+            console.error('Erro ao excluir comprador:', erro);
+        } finally {
+            setExcluindoComprador(false);
+            setModalExcluirComprador(false);
         }
     }
 
@@ -202,6 +229,30 @@ function PaginaCompradorAdminClienteContent({ usuarioId }: Props) {
                     totalConsolidado={totalConsolidado}
                     onEfetuarPagamento={() => setModalPagamento(true)}
                 />
+
+                {/* AÇÕES DO COMPRADOR — só na visão admin */}
+                <div className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 flex flex-col gap-3">
+                    <p className="text-xs text-zinc-500 uppercase tracking-wide">
+                        Ações do Comprador
+                    </p>
+                    <div className="flex gap-2">
+                        <Botao
+                            cor="amarelo"
+                            tamanho="sm"
+                            onClick={() => setModalEditarComprador(true)}
+                        >
+                            Editar Comprador
+                        </Botao>
+                        <Botao
+                            cor="vermelho"
+                            tamanho="sm"
+                            icone={<Trash2 size={14} />}
+                            onClick={handleExcluirComprador}
+                        >
+                            Excluir Comprador
+                        </Botao>
+                    </div>
+                </div>
             </main>
 
             {/* Modais de cadastro/edição/pagamento */}
@@ -241,6 +292,24 @@ function PaginaCompradorAdminClienteContent({ usuarioId }: Props) {
                 onSalvar={recarregar}
             />
 
+            {/* Modal de edição do comprador */}
+            <ModalEditarComprador
+                aberto={modalEditarComprador}
+                comprador={
+                    usuario
+                        ? {
+                              id: usuario.id,
+                              nome: usuario.nome,
+                              sobrenome: usuario.sobrenome,
+                              login: usuario.login,
+                              usaUber: usuario.usaUber,
+                          }
+                        : null
+                }
+                onFechar={() => setModalEditarComprador(false)}
+                onSalvar={recarregar}
+            />
+
             {/* Modal de confirmação para exclusão de compra */}
             <ModalConfirmacao
                 aberto={modalExcluir}
@@ -259,6 +328,23 @@ function PaginaCompradorAdminClienteContent({ usuarioId }: Props) {
                     setModalExcluir(false);
                     setCompraExcluindo(null);
                 }}
+            />
+
+            {/* Modal de confirmação para exclusão do comprador */}
+            <ModalConfirmacao
+                aberto={modalExcluirComprador}
+                titulo="Excluir Comprador"
+                mensagem={
+                    usuario
+                        ? `Deseja excluir "${usuario.nome} ${usuario.sobrenome}" (${usuario.login})? Todas as compras, corridas e fechamentos serão removidos permanentemente.`
+                        : 'Deseja excluir este comprador?'
+                }
+                textoConfirmar="Excluir"
+                textoCancelar="Cancelar"
+                corConfirmar="vermelho"
+                carregando={excluindoComprador}
+                onConfirmar={confirmarExcluirComprador}
+                onCancelar={() => setModalExcluirComprador(false)}
             />
         </div>
     );
