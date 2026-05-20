@@ -85,6 +85,7 @@ export function useResumoMensal({
     // ----------------------------------------
     async function buscarDados() {
         setCarregando(true);
+        setCorridas([]); // Limpa corridas ao trocar de usuário
 
         try {
             const [dadosUsuario, dadosCompras, dadosMeses] = await Promise.all([
@@ -96,9 +97,15 @@ export function useResumoMensal({
             ]);
 
             // Validação: se a API retornar objeto de erro, trata como null
-            setUsuario('id' in dadosUsuario ? dadosUsuario : null);
+            const usuarioCarregado = 'id' in dadosUsuario ? dadosUsuario : null;
+            setUsuario(usuarioCarregado);
             setCompras(dadosCompras);
             setMesesFechados(dadosMeses);
+
+            // CORREÇÃO: Busca corridas imediatamente após saber se usa Uber
+            if (usuarioCarregado && usuarioCarregado.usaUber) {
+                await buscarCorridas(usuarioCarregado);
+            }
         } catch (erro) {
             console.error('Erro ao buscar dados:', erro);
             // Em produção, aqui poderia disparar um toast de erro global
@@ -115,13 +122,18 @@ export function useResumoMensal({
     // ----------------------------------------
     // FUNÇÃO: Buscar corridas Uber (só se usaUber = true)
     // ----------------------------------------
-    async function buscarCorridas() {
-        if (!usuario?.usaUber) return;
+    async function buscarCorridas(usuarioParam?: Usuario | null) {
+        const u = usuarioParam ?? usuario;
+        if (!u?.usaUber) {
+            setCorridas([]); // Limpa corridas se o usuário não usar Uber
+            return;
+        }
         setCarregandoUber(true);
+        setCorridas([]); // Limpa corridas ao iniciar nova busca
 
         try {
             const data = await apiGet<Corrida[]>(
-                `/api/corridas/usuario?id=${usuarioId}&mes=${mesSelecionado}&ano=${anoSelecionado}`
+                `/api/corridas/usuario?id=${usuarioId}&mes=${mesSelecionado}&ano=${anoSelecionado}&_t=${Date.now()}` // Adiciona timestamp para evitar cache
             );
             setCorridas(data);
         } catch (erro) {
@@ -138,10 +150,10 @@ export function useResumoMensal({
         await buscarCorridas();
     }
 
-    // Busca corridas quando muda mês/ano ou quando descobre que usaUber
+    // CORREÇÃO: Busca corridas quando muda mês/ano OU quando usuario é carregado
     useEffect(() => {
         buscarCorridas();
-    }, [usuarioId, mesSelecionado, anoSelecionado]);
+    }, [usuarioId, mesSelecionado, anoSelecionado, usuario]);
 
     // ----------------------------------------
     // DADOS DERIVADOS — Calculados com useMemo

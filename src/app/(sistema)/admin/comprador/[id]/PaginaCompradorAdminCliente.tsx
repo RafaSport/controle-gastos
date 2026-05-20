@@ -1,6 +1,5 @@
-// Dashboard do comprador (visão admin) — versão refatorada
-// ANTES: tina busca, cálculos, ações e modais misturados
-// DEPOIS: lógica financeira no hook, ações admin na página
+// Dashboard do comprador (visão admin)
+// CONTÉM: lógica financeira no hook, ações admin na página
 
 'use client';
 
@@ -19,6 +18,7 @@ import TabelaCompras from '@/components/ui/TabelaCompras';
 import { useResumoMensal } from '@/hooks/useResumoMensal';
 import { Compra } from '@/types';
 import { ArrowLeft, PlusCircle } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
@@ -35,7 +35,17 @@ interface Props {
 // ============================================
 
 export default function PaginaCompradorAdminCliente({ usuarioId }: Props) {
+    return (
+        <PaginaCompradorAdminClienteContent
+            key={usuarioId}
+            usuarioId={usuarioId}
+        />
+    );
+}
+
+function PaginaCompradorAdminClienteContent({ usuarioId }: Props) {
     const router = useRouter();
+    const { data: session } = useSession();
 
     // ----------------------------------------
     // HOOK — Lógica financeira compartilhada
@@ -129,7 +139,8 @@ export default function PaginaCompradorAdminCliente({ usuarioId }: Props) {
     // ----------------------------------------
     return (
         <div className="flex-1 bg-zinc-950">
-            <Header nomeUsuario="Admin" />
+            {/* CORREÇÃO: usa o nome real do usuário logado da sessão */}
+            <Header nomeUsuario={session?.user?.name || 'Admin'} />
 
             <main className="max-w-4xl mx-auto px-4 py-6 flex flex-col gap-4">
                 {/* Cabeçalho com nome do comprador e ações */}

@@ -102,7 +102,7 @@ export default function CardUber({
 
     return (
         <>
-            {/* Card resumo do Uber */}
+            {/* Card resumo do Uber — CORREÇÃO: sempre renderiza, mostra loading ou valor */}
             <div className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-black border border-zinc-700 flex items-center justify-center">
@@ -119,14 +119,20 @@ export default function CardUber({
                 </div>
 
                 <div className="flex items-center gap-4">
-                    {!carregando && (
-                        <div className="text-right">
-                            <p className="text-xs text-zinc-500">Total</p>
-                            <p className="text-sm font-bold text-zinc-100">
-                                R$ {total.toFixed(2).replace('.', ',')}
+                    <div className="text-right">
+                        {carregando ? (
+                            <p className="text-xs text-zinc-500">
+                                Carregando...
                             </p>
-                        </div>
-                    )}
+                        ) : (
+                            <>
+                                <p className="text-xs text-zinc-500">Total</p>
+                                <p className="text-sm font-bold text-zinc-100">
+                                    R$ {total.toFixed(2).replace('.', ',')}
+                                </p>
+                            </>
+                        )}
+                    </div>
 
                     <Botao
                         cor="cinza"
