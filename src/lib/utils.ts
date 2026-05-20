@@ -207,3 +207,23 @@ export function criarDataLocalMeioDia(dataISO: string): Date {
     const [ano, mes, dia] = dataISO.split('-').map(Number);
     return new Date(ano, mes - 1, dia, 12, 0, 0);
 }
+
+/**
+ * Calcula a largura mínima (em pixels) para tags de cartão
+ * com base no maior nome cadastrado, garantindo que todas
+ * as tags fiquem alinhadas com o mesmo tamanho.
+ *
+ * Fórmula: (caracteres do maior nome × 9px) + 24px de padding
+ * Mínimo de 64px para garantir legibilidade.
+ */
+export function calcularLarguraMinimaCartao(
+    nomes: Record<string, string>
+): string {
+    const maiorNome = Object.values(nomes).reduce(
+        (max, nome) => (nome.length > max.length ? nome : max),
+        ''
+    );
+    // 9px por caractere + 24px de padding horizontal (12px cada lado)
+    const larguraPx = Math.max(64, maiorNome.length * 9 + 24);
+    return `${larguraPx}px`;
+}
