@@ -3,7 +3,7 @@ import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import { prisma } from './prisma';
 
-const TEMPO_MAXIMO_SESSAO = 3 * 60; // 3 minutos em segundos
+const TEMPO_MAXIMO_SESSAO = 60 * 60; // 60 minutos em segundos
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
     trustHost: true,
