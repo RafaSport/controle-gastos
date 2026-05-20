@@ -15,7 +15,7 @@ import SeletorMes from '@/components/ui/SeletorMes';
 import TabelaCompras from '@/components/ui/TabelaCompras';
 import { useResumoMensal } from '@/hooks/useResumoMensal';
 import { Compra } from '@/types';
-import { ArrowLeft, PlusCircle, Trash2 } from 'lucide-react';
+import { ArrowLeft, Pencil, PlusCircle, Trash2 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -231,25 +231,28 @@ function PaginaCompradorAdminClienteContent({ usuarioId }: Props) {
                 />
 
                 {/* AÇÕES DO COMPRADOR — só na visão admin */}
-                <div className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 flex flex-col gap-3">
-                    <p className="text-xs text-zinc-500 uppercase tracking-wide">
+                <div className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-4 flex flex-col gap-3">
+                    <p className="text-xs text-zinc-500 uppercase tracking-wide text-center">
                         Ações do Comprador
                     </p>
                     <div className="flex gap-2">
                         <Botao
                             cor="amarelo"
                             tamanho="sm"
+                            larguraTotal
+                            icone={<Pencil size={14} />}
                             onClick={() => setModalEditarComprador(true)}
                         >
-                            Editar Comprador
+                            Editar
                         </Botao>
                         <Botao
                             cor="vermelho"
                             tamanho="sm"
+                            larguraTotal
                             icone={<Trash2 size={14} />}
                             onClick={handleExcluirComprador}
                         >
-                            Excluir Comprador
+                            Excluir
                         </Botao>
                     </div>
                 </div>
