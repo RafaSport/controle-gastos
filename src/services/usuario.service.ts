@@ -1,21 +1,73 @@
-import { gerarLogin, gerarSenhaPadrao } from '@/lib/utils';
+import {
+    calcularDividaAnterior,
+    calcularTotalComprasNoMes,
+    calcularTotalCorridas,
+    encontrarPrimeiroMesEmAberto,
+    gerarLogin,
+    gerarSenhaPadrao,
+} from '@/lib/utils';
 import * as usuarioRepo from '@/repositories/usuario.repository';
 import bcrypt from 'bcryptjs';
 
 export async function listarCompradores() {
+    const hoje = new Date();
+    const mesAtual = hoje.getMonth() + 1;
+    const anoAtual = hoje.getFullYear();
+
     const usuarios = await usuarioRepo.buscarTodosCompradores();
-    return usuarios.map((u: any) => ({
-        id: u.id,
-        nome: u.nome,
-        sobrenome: u.sobrenome,
-        login: u.login,
-        usaUber: u.usaUber,
-        qtdCompras: u.compras.length,
-        totalAPagar: u.compras.reduce(
-            (acc: number, c: any) => acc + c.valorParcela,
-            0
-        ),
-    }));
+
+    return usuarios.map((u: any) => {
+        const compras = u.compras || [];
+        const mesesFechados = u.mesesFechados || [];
+        const corridas = u.corridas || [];
+
+        // Encontra o primeiro mês em aberto para este usuário
+        const { mes: mesEmAberto, ano: anoEmAberto } =
+            encontrarPrimeiroMesEmAberto(mesesFechados, mesAtual, anoAtual);
+
+        // Calcula total de compras ativas no mês em aberto
+        const totalCompras = calcularTotalComprasNoMes(
+            compras,
+            mesEmAberto,
+            anoEmAberto
+        );
+
+        // Filtra corridas Uber do mês em aberto
+        const corridasDoMes = corridas.filter(
+            (c: any) =>
+                c.mesReferencia === mesEmAberto &&
+                c.anoReferencia === anoEmAberto
+        );
+        const totalUber = calcularTotalCorridas(corridasDoMes);
+
+        // Calcula dívida anterior (rolante)
+        const dividaAnterior = calcularDividaAnterior(
+            mesesFechados,
+            mesEmAberto,
+            anoEmAberto
+        );
+
+        // Total consolidado do mês em aberto = compras + uber + dívida anterior
+        const totalAPagar = totalCompras + totalUber + dividaAnterior;
+
+        // Conta apenas compras ativas no mês em aberto
+        const qtdCompras = compras.filter((c: any) => {
+            const inicio = c.anoInicio * 12 + c.mesInicio;
+            const fim = c.anoFinal * 12 + c.mesFinal;
+            const selecionado = anoEmAberto * 12 + mesEmAberto;
+            return inicio <= selecionado && fim >= selecionado;
+        }).length;
+
+        return {
+            id: u.id,
+            nome: u.nome,
+            sobrenome: u.sobrenome,
+            login: u.login,
+            usaUber: u.usaUber,
+            qtdCompras,
+            totalAPagar,
+        };
+    });
 }
 
 export async function buscarComprador(id: string) {

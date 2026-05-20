@@ -1,11 +1,12 @@
 import { prisma } from '@/lib/prisma';
 
 // Busca todos os usuários compradores ordenados por nome
+// Inclui compras, meses fechados e corridas para cálculo do total em aberto
 export async function buscarTodosCompradores() {
     return await prisma.usuario.findMany({
         where: { papel: 'COMPRADOR' },
         orderBy: { nome: 'asc' },
-        include: { compras: true },
+        include: { compras: true, mesesFechados: true, corridas: true },
     });
 }
 
