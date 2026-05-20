@@ -1,5 +1,6 @@
 'use client';
 
+import { calcularParcelaAtual } from '@/lib/utils';
 import { Cartao, Compra } from '@/types';
 import Botao from './Botao';
 import CartaoTag from './CartaoTag';
@@ -43,6 +44,13 @@ export default function ModalDetalhesCompra({
     if (!compra) return null;
 
     const temAcoes = !!onEditar || !!onExcluir;
+
+    // Usa a função centralizada do utils para calcular parcela atual
+    const parcelaAtual = calcularParcelaAtual(
+        compra.mesInicio,
+        compra.anoInicio,
+        compra.qtdParcelas
+    );
 
     return (
         <Modal
@@ -102,8 +110,9 @@ export default function ModalDetalhesCompra({
                         <span className="text-xs text-zinc-500 uppercase tracking-wide">
                             Parcelas
                         </span>
-                        <span className="text-zinc-100">
-                            {compra.qtdParcelas}x
+                        {/* Usa a função centralizada do utils */}
+                        <span className="text-zinc-100 font-medium">
+                            {parcelaAtual}/{compra.qtdParcelas}
                         </span>
                     </div>
 

@@ -34,19 +34,22 @@ export default function TabelaBase<T>({
 
     return (
         <div className="w-full overflow-x-auto rounded-lg border border-zinc-800">
-            <table className="w-full text-sm min-w-[640px]">
+            {/* CORREÇÃO: largura mínima responsiva usando classes padrão Tailwind */}
+            <table className="w-full text-sm min-w-80 sm:min-w-[30rem] md:min-w-[40rem]">
                 <thead>
                     <tr className="bg-zinc-800 text-zinc-400 text-xs uppercase tracking-wide">
                         {colunas.map((col, i) => (
                             <th
                                 key={i}
-                                className={`px-3 py-3 text-${col.align ?? 'left'}`}
+                                className={`px-2 sm:px-3 py-2 sm:py-3 text-${col.align ?? 'left'}`}
                             >
                                 {col.header}
                             </th>
                         ))}
                         {acoes && (
-                            <th className="px-3 py-3 text-center">Ações</th>
+                            <th className="px-2 sm:px-3 py-2 sm:py-3 text-center">
+                                Ações
+                            </th>
                         )}
                     </tr>
                 </thead>
@@ -67,13 +70,13 @@ export default function TabelaBase<T>({
                             {colunas.map((col, i) => (
                                 <td
                                     key={i}
-                                    className={`px-2 py-2 text-${col.align ?? 'left'} text-zinc-200`}
+                                    className={`px-1.5 sm:px-2 py-1.5 sm:py-2 text-${col.align ?? 'left'} text-zinc-200`}
                                 >
                                     {col.render(item)}
                                 </td>
                             ))}
                             {acoes && (
-                                <td className="px-2 py-2">
+                                <td className="px-1.5 sm:px-2 py-1.5 sm:py-2">
                                     <div className="flex gap-1 justify-center">
                                         {acoes(item)}
                                     </div>

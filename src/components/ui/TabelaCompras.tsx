@@ -1,3 +1,4 @@
+import { calcularParcelaAtual } from '@/lib/utils';
 import { Compra } from '@/types';
 import { useState } from 'react';
 import TabelaBase, { Coluna } from '../base/TabelaBase';
@@ -13,22 +14,6 @@ interface TabelaComprasProps {
     onEditar?: (compra: Compra) => void;
     onExcluir?: (compra: Compra) => void;
 }
-
-// Array de meses para exibição
-const MESES = [
-    'Jan',
-    'Fev',
-    'Mar',
-    'Abr',
-    'Mai',
-    'Jun',
-    'Jul',
-    'Ago',
-    'Set',
-    'Out',
-    'Nov',
-    'Dez',
-];
 
 // Função para ordenar compras conforme regras de negócio
 function ordenarCompras(compras: Compra[], mes: number, ano: number): Compra[] {
@@ -96,15 +81,20 @@ export default function TabelaCompras({
     }
 
     // Define colunas da tabela — SIMPLIFICADA: apenas 4 colunas
+    // CORREÇÃO: fontes menores no mobile, descrição truncada
     const colunas: Coluna<Compra>[] = [
         {
             header: 'Cartão',
-            render: (compra) => <CartaoTag cartao={compra.cartao} />,
+            render: (compra) => (
+                <div className="scale-90 sm:scale-100 origin-left">
+                    <CartaoTag cartao={compra.cartao} />
+                </div>
+            ),
         },
         {
             header: 'Descrição',
             render: (compra) => (
-                <span className="text-zinc-200 truncate max-w-[120px] sm:max-w-none block">
+                <span className="text-zinc-200 text-xs sm:text-sm truncate max-w-20 sm:max-w-36 md:max-w-none block">
                     {compra.descricao}
                 </span>
             ),
@@ -113,13 +103,15 @@ export default function TabelaCompras({
             header: 'Parcelas',
             align: 'center',
             render: (compra) => {
-                const parcelaAtual =
-                    anoSelecionado * 12 +
-                    mesSelecionado -
-                    (compra.anoInicio * 12 + compra.mesInicio) +
-                    1;
+                const parcelaAtual = calcularParcelaAtual(
+                    compra.mesInicio,
+                    compra.anoInicio,
+                    compra.qtdParcelas,
+                    mesSelecionado,
+                    anoSelecionado
+                );
                 return (
-                    <span className="text-zinc-400 text-xs">
+                    <span className="text-zinc-400 text-xs sm:text-sm whitespace-nowrap">
                         {parcelaAtual}/{compra.qtdParcelas}
                     </span>
                 );
@@ -129,7 +121,7 @@ export default function TabelaCompras({
             header: 'Valor',
             align: 'right',
             render: (compra) => (
-                <span className="text-zinc-100 font-medium">
+                <span className="text-zinc-100 font-medium text-xs sm:text-sm whitespace-nowrap">
                     R$ {compra.valorParcela.toFixed(2).replace('.', ',')}
                 </span>
             ),

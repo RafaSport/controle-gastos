@@ -227,3 +227,24 @@ export function calcularLarguraMinimaCartao(
     const larguraPx = Math.max(64, maiorNome.length * 9 + 24);
     return `${larguraPx}px`;
 }
+
+/**
+ * Calcula qual é a parcela atual de uma compra em determinado mês/ano.
+ * Retorna o número da parcela atual (1-based) limitado ao total de parcelas.
+ */
+export function calcularParcelaAtual(
+    mesInicio: number,
+    anoInicio: number,
+    qtdParcelas: number,
+    mesReferencia?: number,
+    anoReferencia?: number
+): number {
+    const hoje = new Date();
+    const mesAtual = mesReferencia ?? hoje.getMonth() + 1;
+    const anoAtual = anoReferencia ?? hoje.getFullYear();
+
+    const parcelaAtual =
+        anoAtual * 12 + mesAtual - (anoInicio * 12 + mesInicio) + 1;
+
+    return Math.max(1, Math.min(qtdParcelas, parcelaAtual));
+}
