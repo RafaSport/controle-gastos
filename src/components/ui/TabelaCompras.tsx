@@ -1,14 +1,17 @@
-import { Cartao, Compra } from '@/types';
-import CartaoTag from './CartaoTag';
+import { Compra } from '@/types';
+import { useState } from 'react';
 import TabelaBase, { Coluna } from '../base/TabelaBase';
+import CartaoTag from './CartaoTag';
+import ModalDetalhesCompra from './ModalDetalhesCompra';
 
 // Props específicas da tabela de compras
 interface TabelaComprasProps {
     compras: Compra[];
     mesSelecionado: number;
     anoSelecionado: number;
-    // Prop opcional — se passada, renderiza coluna de ações (visão admin)
-    acoes?: (compra: Compra) => React.ReactNode;
+    // Ações opcionais — se passadas, aparecem no modal de detalhes (admin)
+    onEditar?: (compra: Compra) => void;
+    onExcluir?: (compra: Compra) => void;
 }
 
 // Array de meses para exibição
@@ -58,8 +61,14 @@ export default function TabelaCompras({
     compras,
     mesSelecionado,
     anoSelecionado,
-    acoes,
+    onEditar,
+    onExcluir,
 }: TabelaComprasProps) {
+    const [compraSelecionada, setCompraSelecionada] = useState<Compra | null>(
+        null
+    );
+    const [modalAberto, setModalAberto] = useState(false);
+
     // Filtra compras do mês selecionado
     const comprasDoMes = compras.filter((c) => {
         const ini = c.anoInicio * 12 + c.mesInicio;
@@ -75,54 +84,75 @@ export default function TabelaCompras({
         anoSelecionado
     );
 
-    // Define colunas da tabela
+    // Abre modal com detalhes da compra
+    function handleRowClick(compra: Compra) {
+        setCompraSelecionada(compra);
+        setModalAberto(true);
+    }
+
+    function handleFecharModal() {
+        setModalAberto(false);
+        setCompraSelecionada(null);
+    }
+
+    // Define colunas da tabela — SIMPLIFICADA: apenas 4 colunas
     const colunas: Coluna<Compra>[] = [
         {
             header: 'Cartão',
-            render: (compra) => <CartaoTag cartao={compra.cartao as Cartao} />,
+            render: (compra) => <CartaoTag cartao={compra.cartao} />,
         },
         {
             header: 'Descrição',
-            render: (compra) => compra.descricao,
-        },
-        {
-            header: 'Mês compra',
-            render: (compra) =>
-                `${MESES[compra.mesCompra - 1]}/${compra.anoCompra}`,
-            align: 'center',
-        },
-        {
-            header: 'Início',
-            render: (compra) =>
-                `${MESES[compra.mesInicio - 1]}/${compra.anoInicio}`,
-            align: 'center',
+            render: (compra) => (
+                <span className="text-zinc-200 truncate max-w-[120px] sm:max-w-none block">
+                    {compra.descricao}
+                </span>
+            ),
         },
         {
             header: 'Parcelas',
-            render: (compra) =>
-                `${anoSelecionado * 12 + mesSelecionado - (compra.anoInicio * 12 + compra.mesInicio) + 1}/${compra.qtdParcelas}`,
             align: 'center',
-        },
-        {
-            header: 'Término',
-            render: (compra) =>
-                `${MESES[compra.mesFinal - 1]}/${compra.anoFinal}`,
-            align: 'center',
+            render: (compra) => {
+                const parcelaAtual =
+                    anoSelecionado * 12 +
+                    mesSelecionado -
+                    (compra.anoInicio * 12 + compra.mesInicio) +
+                    1;
+                return (
+                    <span className="text-zinc-400 text-xs">
+                        {parcelaAtual}/{compra.qtdParcelas}
+                    </span>
+                );
+            },
         },
         {
             header: 'Valor',
-            render: (compra) =>
-                `R$ ${compra.valorParcela.toFixed(2).replace('.', ',')}`,
             align: 'right',
+            render: (compra) => (
+                <span className="text-zinc-100 font-medium">
+                    R$ {compra.valorParcela.toFixed(2).replace('.', ',')}
+                </span>
+            ),
         },
     ];
 
     return (
-        <TabelaBase
-            dados={ordenadas}
-            colunas={colunas}
-            acoes={acoes}
-            emptyMessage="Nenhuma compra neste mês."
-        />
+        <>
+            <TabelaBase
+                dados={ordenadas}
+                colunas={colunas}
+                emptyMessage="Nenhuma compra neste mês."
+                onRowClick={handleRowClick}
+            />
+
+            {/* Modal de detalhes — abre ao clicar na linha */}
+            <ModalDetalhesCompra
+                aberto={modalAberto}
+                compra={compraSelecionada}
+                onFechar={handleFecharModal}
+                onEditar={onEditar}
+                onExcluir={onExcluir}
+            />
+        </>
     );
 }

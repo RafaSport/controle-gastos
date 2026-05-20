@@ -105,7 +105,7 @@ export default function PaginaCompradorCliente({
                     anoSelecionado={anoSelecionado}
                 />
 
-                {/* Tabela de compras do mês */}
+                {/* Tabela de compras do mês — SEM ações (visão comprador) */}
                 <TabelaCompras
                     compras={compras}
                     mesSelecionado={mesSelecionado}

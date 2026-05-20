@@ -88,8 +88,14 @@ function PaginaCompradorAdminClienteContent({ usuarioId }: Props) {
     const [excluindo, setExcluindo] = useState(false);
 
     // ----------------------------------------
-    // AÇÕES ADMIN
+    // AÇÕES ADMIN — passadas para a tabela (aparecem no modal)
     // ----------------------------------------
+
+    /** Abre modal de edição com a compra selecionada */
+    function handleEditarCompra(compra: Compra) {
+        setCompraEditando(compra);
+        setModalEditar(true);
+    }
 
     /** Abre modal de confirmação para excluir compra */
     function handleExcluirCompra(compra: Compra) {
@@ -115,12 +121,6 @@ function PaginaCompradorAdminClienteContent({ usuarioId }: Props) {
             setModalExcluir(false);
             setCompraExcluindo(null);
         }
-    }
-
-    /** Abre modal de edição com a compra selecionada */
-    function handleEditarCompra(compra: Compra) {
-        setCompraEditando(compra);
-        setModalEditar(true);
     }
 
     // ----------------------------------------
@@ -184,29 +184,13 @@ function PaginaCompradorAdminClienteContent({ usuarioId }: Props) {
                     anoSelecionado={anoSelecionado}
                 />
 
-                {/* Tabela de compras com ações de admin */}
+                {/* Tabela de compras — ações aparecem no modal ao clicar */}
                 <TabelaCompras
                     compras={compras}
                     mesSelecionado={mesSelecionado}
                     anoSelecionado={anoSelecionado}
-                    acoes={(compra) => (
-                        <>
-                            <Botao
-                                cor="amarelo"
-                                tamanho="sm"
-                                onClick={() => handleEditarCompra(compra)}
-                            >
-                                Editar
-                            </Botao>
-                            <Botao
-                                cor="vermelho"
-                                tamanho="sm"
-                                onClick={() => handleExcluirCompra(compra)}
-                            >
-                                Excluir
-                            </Botao>
-                        </>
-                    )}
+                    onEditar={handleEditarCompra}
+                    onExcluir={handleExcluirCompra}
                 />
 
                 {/* Resumo financeiro com ação de pagamento */}
@@ -257,7 +241,7 @@ function PaginaCompradorAdminClienteContent({ usuarioId }: Props) {
                 onSalvar={recarregar}
             />
 
-            {/* Modal de confirmação para exclusão (substitui confirm() nativo) */}
+            {/* Modal de confirmação para exclusão de compra */}
             <ModalConfirmacao
                 aberto={modalExcluir}
                 titulo="Excluir Compra"
