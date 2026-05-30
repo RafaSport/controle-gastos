@@ -6,6 +6,7 @@ import Botao from './Botao';
 import Feedback from './Feedback';
 import Input from './Input';
 import Modal from './Modal';
+import { Toggle } from './Toggle';
 
 interface Props {
     aberto: boolean;
@@ -58,17 +59,28 @@ export default function ModalCadastroCorrida({
     const [data, setData] = useState(dataHoje);
     const [valor, setValor] = useState('');
     const [alerta, setAlerta] = useState('');
+    const [proximoMes, setProximoMes] = useState(false);
     const [carregando, setCarregando] = useState(false);
     const [feedback, setFeedback] = useState<{
         tipo: 'sucesso' | 'erro';
         msg: string;
     } | null>(null);
 
+    // Calcula mês/ano de lançamento com base no toggle
+    const mesLancamento = proximoMes
+        ? mesEmAberto === 12
+            ? 1
+            : mesEmAberto + 1
+        : mesEmAberto;
+    const anoLancamento =
+        proximoMes && mesEmAberto === 12 ? anoEmAberto + 1 : anoEmAberto;
+
     useEffect(() => {
         if (aberto) {
             setData(formatarData(new Date()));
             setValor('');
             setAlerta('');
+            setProximoMes(false);
             setFeedback(null);
         }
     }, [aberto]);
@@ -107,8 +119,8 @@ export default function ModalCadastroCorrida({
             await apiPost('/api/corridas', {
                 usuarioId,
                 data,
-                mesReferencia: mesEmAberto,
-                anoReferencia: anoEmAberto,
+                mesReferencia: mesLancamento,
+                anoReferencia: anoLancamento,
                 valor: parseFloat(valor.replace(',', '.')),
             });
 
@@ -162,11 +174,27 @@ export default function ModalCadastroCorrida({
                             onChange={(e) => handleMudancaData(e.target.value)}
                         />
 
+                        {/* Toggle para lançar no próximo mês */}
+                        <div className="flex items-center justify-between bg-zinc-800 rounded-lg px-3 py-2.5">
+                            <div>
+                                <p className="text-sm text-zinc-200">
+                                    Lançar no próximo mês
+                                </p>
+                                <p className="text-xs text-zinc-500">
+                                    Útil quando a fatura já fechou
+                                </p>
+                            </div>
+                            <Toggle
+                                value={proximoMes}
+                                onChange={setProximoMes}
+                            />
+                        </div>
+
                         <div className="bg-zinc-800 rounded-lg px-3 py-2">
                             <p className="text-xs text-zinc-400">
                                 Corrida será lançada em:
                                 <span className="text-blue-400 font-medium ml-1">
-                                    {MESES[mesEmAberto - 1]}/{anoEmAberto}
+                                    {MESES[mesLancamento - 1]}/{anoLancamento}
                                 </span>
                             </p>
                         </div>

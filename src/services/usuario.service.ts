@@ -65,6 +65,8 @@ export async function listarCompradores() {
             login: u.login,
             usaUber: u.usaUber,
             qtdCompras,
+            mesEmAberto,
+            anoEmAberto,
             totalAPagar,
         };
     });

@@ -9,13 +9,29 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+const MESES = [
+    'Jan',
+    'Fev',
+    'Mar',
+    'Abr',
+    'Mai',
+    'Jun',
+    'Jul',
+    'Ago',
+    'Set',
+    'Out',
+    'Nov',
+    'Dez',
+];
+
 interface Comprador {
     id: string;
     nome: string;
     sobrenome: string;
     login: string;
     usaUber: boolean;
-    qtdCompras: number;
+    mesEmAberto: number;
+    anoEmAberto: number;
     totalAPagar: number;
 }
 
@@ -23,7 +39,6 @@ export default function PaginaAdminCliente() {
     const { data: session, status } = useSession();
     const router = useRouter();
 
-    // TODOS OS HOOKS DEVEM FICAR ANTES DOS RETURNS
     const [compradores, setCompradores] = useState<Comprador[]>([]);
     const [carregando, setCarregando] = useState(true);
     const [modalCadastro, setModalCadastro] = useState(false);
@@ -79,10 +94,12 @@ export default function PaginaAdminCliente() {
             ),
         },
         {
-            header: 'Compras',
+            header: 'Mês Aberto',
             align: 'center',
             render: (c) => (
-                <span className="text-zinc-400">{c.qtdCompras}</span>
+                <span className="text-zinc-400 text-xs sm:text-sm">
+                    {MESES[c.mesEmAberto - 1]}/{c.anoEmAberto}
+                </span>
             ),
         },
         {
